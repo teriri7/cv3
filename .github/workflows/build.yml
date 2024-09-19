@@ -19,13 +19,15 @@ jobs:
         python-version: '3.x'
 
     - name: Install dependencies
-      run: pip install pyinstaller
+      run: |
+        pip install requests Pillow pyautogui pywin32 pyperclip
+        pip install pyinstaller
 
     - name: Build EXE
-      run: pyinstaller --onefile cv3.py
+      run: pyinstaller --onefile --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip cv3.py
 
     - name: Upload EXE as artifact
-      uses: actions/upload-artifact@v3  # 更新到 v3
+      uses: actions/upload-artifact@v3
       with:
         name: cv3-exe
         path: dist/cv3.exe
