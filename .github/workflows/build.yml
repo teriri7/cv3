@@ -24,10 +24,10 @@ jobs:
         pip install pyinstaller
 
     - name: Build EXE
-      run: pyinstaller --onefile --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip cv3.py
+      run: pyinstaller --onefile --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip epro.py
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v3
       with:
-        name: cv3-exe
-        path: dist/cv3.exe
+        name: epro-exe
+        path: dist/epro.exe
