@@ -36,12 +36,12 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: my-python-app
-        path: dist/图片场景判断.exe  # 指定打包生成的 exe 文件路径
+        path: dist/db.exe  # 指定打包生成的 exe 文件路径
 
     - name: Create GitHub Release
       if: github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/图片场景判断.exe  # 将 exe 文件发布到 GitHub Release
+        files: dist/db.exe  # 将 exe 文件发布到 GitHub Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub 提供的 token，用于创建发布版本
