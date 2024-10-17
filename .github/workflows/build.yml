@@ -32,6 +32,14 @@ jobs:
         pyinstaller --onefile db.py  # 将 db.py 打包成单个可执行文件
       shell: bash
 
+    - name: Create a new version tag
+      id: tag_version
+      run: |
+        tag="v1.0.$(date +'%Y%m%d%H%M%S')"  # 创建带有时间戳的版本标签
+        echo "Tagging version as $tag"
+        git tag $tag
+        git push origin $tag  # 推送标签到远程仓库
+
     - name: Upload exe as artifact
       uses: actions/upload-artifact@v3
       with:
@@ -39,9 +47,9 @@ jobs:
         path: dist/db.exe  # 指定打包生成的 exe 文件路径
 
     - name: Create GitHub Release
-      if: github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v1
       with:
         files: dist/db.exe  # 将 exe 文件发布到 GitHub Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub 提供的 token，用于创建发布版本
+      if: github.ref == 'refs/heads/main'
