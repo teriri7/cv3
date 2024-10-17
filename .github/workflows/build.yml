@@ -1,33 +1,47 @@
-name: Build EXE
+name: Build Python Application
 
 on:
   push:
     branches:
-      - main
+      - main  # 在主分支上推送时触发
+  pull_request:
+    branches:
+      - main  # 在对主分支的拉取请求时触发
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-latest  # 使用Windows环境
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v3  # 检出你的代码仓库
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: '3.x'  # 安装Python 3.x版本
 
     - name: Install dependencies
       run: |
-        pip install requests Pillow pyautogui pywin32 pyperclip
-        pip install pyinstaller
+        python -m pip install --upgrade pip
+        pip install pyinstaller  # 安装PyInstaller
+        pip install -r requirements.txt  # 安装其他项目依赖
 
-    - name: Build EXE
-      run: pyinstaller --onefile --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip epro.py
+    - name: Build executable
+      run: |
+        pyinstaller --onefile db.py  # 将 db.py 打包成单个可执行文件
+      shell: bash
 
-    - name: Upload EXE as artifact
+    - name: Upload exe as artifact
       uses: actions/upload-artifact@v3
       with:
-        name: epro-exe
-        path: dist/epro.exe
+        name: my-python-app
+        path: dist/图片场景判断.exe  # 指定打包生成的 exe 文件路径
+
+    - name: Create GitHub Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/图片场景判断.exe  # 将 exe 文件发布到 GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub 提供的 token，用于创建发布版本
