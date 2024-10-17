@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'  # 安装Python 3.x版本
+        python-version: '3.x'  # 安装 Python 3.x 版本
 
     - name: Install dependencies
       run: |
@@ -34,8 +34,8 @@ jobs:
     - name: Create a new version tag
       id: tag_version
       run: |
-        tag="v2"  # 固定版本标签为 v2
-        echo "Tagging version as $tag"
+        $tag = "v2"  # 固定版本标签为 v2
+        Write-Host "Tagging version as $tag"
         git config --global user.name "teriri7"  # 配置用户名
         git config --global user.email "321107534@qq.com"  # 配置用户邮箱
         git tag $tag  # 创建标签
