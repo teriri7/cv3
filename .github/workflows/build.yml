@@ -34,10 +34,14 @@ jobs:
     - name: Create a new version tag
       id: tag_version
       run: |
-        $tag = "v1.0.$(Get-Date -Format 'yyyyMMddHHmmss')"  # 创建带有时间戳的版本标签
+        tag="v2"  # 固定版本标签为 v2
         echo "Tagging version as $tag"
-        git tag $tag
+        git config --global user.name "teriri7"  # 配置用户名
+        git config --global user.email "321107534@qq.com"  # 配置用户邮箱
+        git tag $tag  # 创建标签
         git push origin $tag  # 推送标签到远程仓库
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub 提供的 token 进行权限验证
 
     - name: Upload exe as artifact
       uses: actions/upload-artifact@v3
@@ -50,5 +54,5 @@ jobs:
       with:
         files: dist/db.exe  # 将 exe 文件发布到 GitHub Release
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub 提供的 token，用于创建发布版本
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 使用 GitHub 提供的 token
       if: github.ref == 'refs/heads/main'
