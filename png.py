@@ -2,7 +2,7 @@ import os
 import tkinter as tk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, UnidentifiedImageError
-from tkinter import messagebox
+from tkinter import scrolledtext
 
 # 创建一个png文件夹用于保存转换后的文件
 output_dir = "png"
@@ -21,7 +21,7 @@ def convert_to_png(file_path):
         img.save(output_path, "PNG")
         return output_path
     except UnidentifiedImageError:
-        messagebox.showerror("错误", f"无法识别文件: {file_path}")
+        log_message(f"错误: 无法识别文件 {file_path}")
         return None
 
 # 当用户拖入文件时调用的函数
@@ -31,17 +31,28 @@ def on_drop(event):
         if os.path.isfile(file_path):
             output_path = convert_to_png(file_path)
             if output_path:
-                messagebox.showinfo("成功", f"图片已转换为PNG: {output_path}")
+                log_message(f"成功: 图片已转换为 {output_path}")
+
+# 日志信息显示
+def log_message(message):
+    log_area.config(state=tk.NORMAL)  # 使Text控件可编辑
+    log_area.insert(tk.END, message + "\n")
+    log_area.config(state=tk.DISABLED)  # 禁止用户编辑日志区域
+    log_area.yview(tk.END)  # 自动滚动到底部
 
 # 创建TkinterDnD窗口
 root = TkinterDnD.Tk()
 root.title("图片格式转换器")
-root.geometry("400x300")
-root.config(bg='#2c3e50')
+root.geometry("600x400")  # 调整窗口大小
+root.config(bg='#34495e')
 
 # 添加一个提示标签
-label = tk.Label(root, text="请将图片拖入此窗口\n自动转换为PNG格式", bg='#2c3e50', fg='white', font=('Arial', 16))
-label.pack(pady=80)
+label = tk.Label(root, text="请将图片拖入此窗口\n自动转换为PNG格式", bg='#34495e', fg='white', font=('Arial', 20, 'bold'))
+label.pack(pady=40)
+
+# 创建一个滚动文本框，用于显示日志信息
+log_area = scrolledtext.ScrolledText(root, height=8, bg='#ecf0f1', font=('Arial', 12), state=tk.DISABLED, wrap=tk.WORD)
+log_area.pack(fill=tk.BOTH, padx=20, pady=20, expand=True)
 
 # 绑定拖入事件
 root.drop_target_register(DND_FILES)
