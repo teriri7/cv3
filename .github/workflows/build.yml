@@ -20,14 +20,14 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install requests Pillow numpy
+        pip install tkinterdnd2 pillow
         pip install pyinstaller
 
     - name: Build EXE
-      run: pyinstaller --onefile --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip db.py
+      run: pyinstaller --onefile --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip png.py
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v3
       with:
-        name: db-exe
-        path: dist/db.exe
+        name: png-exe
+        path: dist/png.exe
