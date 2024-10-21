@@ -16,15 +16,22 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.10'
+        python-version: '3.9'  # 推荐指定一个确切的版本号
 
     - name: Install dependencies
       run: |
         pip install tkinterdnd2 pillow
         pip install pyinstaller
 
+    - name: Create hooks folder and add hook file
+      run: |
+        mkdir hooks
+        echo "from PyInstaller.utils.hooks import collect_data_files" > hooks/hook-tkinterdnd2.py
+        echo "datas = collect_data_files('tkinterdnd2')" >> hooks/hook-tkinterdnd2.py
+
     - name: Build EXE
-      run: pyinstaller --onefile --noconsole --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip png.py
+      run: |
+        pyinstaller --onefile --noconsole --additional-hooks-dir=hooks --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip png.py
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v3
