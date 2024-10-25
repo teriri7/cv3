@@ -13,27 +13,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
       with:
-        python-version: '3.9'  # 推荐指定一个确切的版本号
+        node-version: '18'  # 指定 Node.js 版本
 
     - name: Install dependencies
       run: |
-        pip install tkinterdnd2 pillow requests pyinstaller
-
-    - name: Create hooks folder and add hook file
-      run: |
-        mkdir hooks
-        echo "from PyInstaller.utils.hooks import collect_data_files" > hooks/hook-tkinterdnd2.py
-        echo "datas = collect_data_files('tkinterdnd2')" >> hooks/hook-tkinterdnd2.py
+        npm install puppeteer
+        npm install -g pkg  # 安装 pkg
 
     - name: Build EXE
       run: |
-        python -m PyInstaller --onefile --noconsole --additional-hooks-dir=hooks --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip fy.py
+        pkg fy-translator.js --output fy-translator.exe  # 打包成 exe 文件
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v3
       with:
-        name: fy-exe
-        path: dist/fy.exe
+        name: fy-translator-exe
+        path: fy-translator.exe
