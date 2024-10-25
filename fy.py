@@ -26,10 +26,17 @@ def translate(query, from_lang, to_lang):
         response = requests.get(url, headers=headers, timeout=10)  # 设置超时
         response.raise_for_status()  # 检查是否有请求错误
         result = response.json()
-        return result['trans_result'][0]['dst']
+        
+        # 检查是否包含 'trans_result' 键
+        if 'trans_result' in result:
+            return result['trans_result'][0]['dst']
+        else:
+            messagebox.showerror("Error", f"Translation API error: {result}")
+            return None
     except requests.exceptions.RequestException as e:
         messagebox.showerror("Error", f"Failed to translate: {e}")
         return None
+
 
 # 批量翻译并写入新文件
 def batch_translate(file_path, from_lang, to_lang):
