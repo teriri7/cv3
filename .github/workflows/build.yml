@@ -20,7 +20,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install tkinterdnd2 pillow requests
+        pip install tkinterdnd2 pillow requests pyinstaller
 
     - name: Create hooks folder and add hook file
       run: |
@@ -30,7 +30,7 @@ jobs:
 
     - name: Build EXE
       run: |
-        pyinstaller --onefile --noconsole --additional-hooks-dir=hooks --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip fy.py
+        python -m PyInstaller --onefile --noconsole --additional-hooks-dir=hooks --hidden-import=win32clipboard --hidden-import=win32con --hidden-import=pyperclip fy.py
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v3
