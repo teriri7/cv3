@@ -11,19 +11,23 @@ def generate_sign(query, appid, salt, secret_key):
     md5.update(sign_str.encode('utf-8'))
     return md5.hexdigest()
 
-# 进行翻译请求
 def translate(query, from_lang, to_lang):
     appid = '20241024002184374'
     secret_key = '2KmdnLteDW7wHsFT_U54'
     salt = 114514
     sign = generate_sign(query, appid, salt, secret_key)
     url = f"http://api.fanyi.baidu.com/api/trans/vip/translate?q={query}&from={from_lang}&to={to_lang}&appid={appid}&salt={salt}&sign={sign}"
-
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+    }
+    
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers, timeout=10)  # 设置超时
+        response.raise_for_status()  # 检查是否有请求错误
         result = response.json()
         return result['trans_result'][0]['dst']
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         messagebox.showerror("Error", f"Failed to translate: {e}")
         return None
 
