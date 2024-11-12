@@ -13,22 +13,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
       with:
-        node-version: '18'  # 指定 Node.js 版本
+        python-version: '3.9'  # 指定 Python 版本
 
-    - name: Install dependencies
+    - name: Install PyInstaller
       run: |
-        npm install puppeteer
-        npm install -g pkg  # 安装 pkg
+        python -m pip install --upgrade pip
+        pip install pyinstaller
 
     - name: Build EXE
       run: |
-        pkg fy-translator.js --output fy-translator.exe  # 打包成 exe 文件
+        pyinstaller --onefile --windowed book.py  # 打包成单个 exe 文件，无控制台窗口
 
     - name: Upload EXE as artifact
       uses: actions/upload-artifact@v3
       with:
-        name: fy-translator-exe
-        path: fy-translator.exe
+        name: book-exe
+        path: dist/book.exe
