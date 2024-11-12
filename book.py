@@ -56,20 +56,34 @@ class BookReaderApp:
         book_path = os.path.join(os.getcwd(), "book", self.current_book)
 
         try:
-            with open(book_path, "rb") as file:  # 以二进制模式打开文件
-                raw_data = file.read()
-                detected_encoding = chardet.detect(raw_data)['encoding']  # 检测编码
-
-            # 使用检测到的编码读取内容
-            with open(book_path, "r", encoding=detected_encoding) as file:
-                self.content = file.readlines()
+            # 尝试读取文件内容，首先自动检测编码，如果失败则使用备选编码列表
+            self.content = self.read_file_with_encoding(book_path)
             
+            # 加载上次阅读的页码
             self.current_page = self.load_page_progress(self.current_book)
             self.book_listbox.place_forget()  # 隐藏小说列表框
             self.show_text_area()  # 显示阅读区域
             self.show_page()
         except Exception as e:
             messagebox.showerror("错误", f"无法打开文件：{e}")
+
+    def read_file_with_encoding(self, filepath):
+        # 自动检测文件编码
+        with open(filepath, "rb") as file:
+            raw_data = file.read()
+            detected_encoding = chardet.detect(raw_data)['encoding']
+        
+        # 编码尝试列表，包含常见编码和检测到的编码
+        encodings = [detected_encoding, "utf-8", "gbk", "gb18030", "ISO-8859-1"]
+
+        # 尝试使用多种编码读取文件，直到成功
+        for encoding in encodings:
+            try:
+                with open(filepath, "r", encoding=encoding) as file:
+                    return file.readlines()
+            except (UnicodeDecodeError, LookupError):
+                continue
+        raise UnicodeDecodeError(f"文件无法使用以下编码读取：{encodings}")
 
     def show_text_area(self):
         # 创建文本显示区域，使用相同的背景色并去掉边框
