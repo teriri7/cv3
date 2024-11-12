@@ -3,12 +3,13 @@ from tkinter import messagebox
 import os
 import pickle
 import textwrap
+import chardet  # 自动检测编码
 
 class BookReaderApp:
     def __init__(self, root):
         self.root = root
         self.root.title("小说阅读器")
-        self.root.geometry("400x660")
+        self.root.geometry("370x660")
         self.root.resizable(False, False)
         self.current_page = 0
         self.lines_per_page = 20
@@ -55,7 +56,12 @@ class BookReaderApp:
         book_path = os.path.join(os.getcwd(), "book", self.current_book)
 
         try:
-            with open(book_path, "r", encoding="utf-8") as file:
+            with open(book_path, "rb") as file:  # 以二进制模式打开文件
+                raw_data = file.read()
+                detected_encoding = chardet.detect(raw_data)['encoding']  # 检测编码
+
+            # 使用检测到的编码读取内容
+            with open(book_path, "r", encoding=detected_encoding) as file:
                 self.content = file.readlines()
             
             self.current_page = self.load_page_progress(self.current_book)
