@@ -9,7 +9,7 @@ class BookReaderApp:
     def __init__(self, root):
         self.root = root
         self.root.title("小说阅读器")
-        self.root.geometry("370x660")
+        self.root.geometry("400x660")
         self.root.resizable(False, False)
         self.current_page = 0
         self.lines_per_page = 20
