@@ -15,7 +15,7 @@ class BookReaderApp:
         self.lines_per_page = 20
         self.content = ""
         self.current_book = ""
-        self.line_width = 20  # 每行字符数限制
+        self.line_width = 17  # 每行字符数限制
 
         # 加载阅读进度
         self.load_progress()
