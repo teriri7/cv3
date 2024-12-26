@@ -28,10 +28,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
+          pip install tk
 
       # 打包为 EXE
       - name: Build EXE
-        run: pyinstaller --onefile sp.py
+        run: pyinstaller --onefile --noconsole sp.py
 
       # 保存打包结果
       - name: Upload artifact
