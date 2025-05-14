@@ -1,37 +1,36 @@
-name: Build EXE
+name: Build Windows Executable
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller requests beautifulsoup4
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pillow tkinterdnd2 pyinstaller
 
-      - name: Build EXE
-        run: |
-          pyinstaller --onefile --noconsole xhs.py
+    - name: PyInstaller build
+      run: |
+        pyinstaller --onefile --noconsole --name hb hb.py
+        # 如果遇到模块找不到错误，可以添加隐藏导入
+        # pyinstaller --onefile --noconsole --hidden-import tkinterdnd2 --name hb hb.py
 
-      - name: Upload EXE
-        uses: actions/upload-artifact@v3
-        with:
-          name: xhs_exe
-          path: dist/xhs.exe
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: hb-executable
+        path: dist/hb.exe
