@@ -1,4 +1,4 @@
-name: Build Windows Executable
+name: Build WebP Converter
 
 on:
   push:
@@ -6,7 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-windows:
+    name: Build Windows Executable
     runs-on: windows-latest
 
     steps:
@@ -23,14 +24,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install pillow tkinterdnd2 pyinstaller
 
-    - name: PyInstaller build
+    - name: Build executable with PyInstaller
       run: |
-        pyinstaller --onefile --noconsole --name hb hb.py
-        # 如果遇到模块找不到错误，可以添加隐藏导入
-        # pyinstaller --onefile --noconsole --hidden-import tkinterdnd2 --name hb hb.py
+        pyinstaller --onefile --noconsole --name webp2png webp_converter.py
+        # 如果遇到模块找不到错误，添加：
+        # --hidden-import tkinterdnd2
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: hb-executable
-        path: dist/hb.exe
+        name: webp2png-exe
+        path: dist/webp2png.exe
