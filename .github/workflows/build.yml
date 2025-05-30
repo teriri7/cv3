@@ -24,20 +24,13 @@ jobs:
         pip install pyinstaller
         pip install pillow pyautogui pywin32 ttkbootstrap
 
-    - name: Add Python to PATH
-      run: |
-        echo "Adding Python to PATH"
-        echo "$env:Location" | Out-File -FilePath $env:GITHUB_PATH -Append
-        $pythonPath = (Get-Command python).Path
-        $pythonDir = Split-Path -Parent $pythonPath
-        echo "$pythonDir" | Out-File -FilePath $env:GITHUB_PATH -Append
-
     - name: Build with PyInstaller
+      shell: powershell
       run: |
-        pyinstaller --onefile --windowed --name "Excel图片工具" ^
-          --add-data "$env:LOCALAPPDATA\\Programs\\Python\\Python311\\Lib\\site-packages\\ttkbootstrap;ttkbootstrap/" ^
-          --icon "NONE" ^
-          --clean ^
+        $ttkPath = (pip show ttkbootstrap | Select-String 'Location:').ToString().Split()[1]
+        pyinstaller --onefile --windowed --name "Excel图片工具" `
+          --add-data "$ttkPath\ttkbootstrap;ttkbootstrap/" `
+          --clean `
           cv4.py
 
     - name: Upload artifact
