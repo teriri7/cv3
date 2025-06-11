@@ -135,9 +135,6 @@ class ImageMergerApp:
         try:
             output_path = self.merge_images(valid_files, selected_mode)
             self.log_message(f"合并成功！保存路径: {output_path}")
-            # 询问用户是否打开所在文件夹
-            if messagebox.askyesno("操作成功", "图片合并完成！是否打开所在文件夹？"):
-                os.startfile(os.path.dirname(output_path))
         except Exception as e:
             self.log_message(f"处理出错: {str(e)}")
             messagebox.showerror("错误", f"处理过程中发生错误:\n{str(e)}")
