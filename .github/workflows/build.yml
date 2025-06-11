@@ -2,7 +2,7 @@ name: Build Windows Executable
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -11,30 +11,31 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller
-        pip install pillow pyautogui pywin32 ttkbootstrap
+        pip install pyinstaller pillow tkinterdnd2
 
-    - name: Build with PyInstaller
-      shell: powershell
+    - name: Add pyinstaller to PATH
+      run: echo "$env:USERPROFILE\AppData\Roaming\Python\Python310\Scripts" >> $env:GITHUB_PATH
+
+    - name: Build executable
       run: |
-        $ttkPath = (pip show ttkbootstrap | Select-String 'Location:').ToString().Split()[1]
-        pyinstaller --onefile --windowed --name "Excel图片工具" `
-          --add-data "$ttkPath\ttkbootstrap;ttkbootstrap/" `
-          --clean `
-          cv4.py
+        pyinstaller --onefile --windowed `
+          --name "ImageMergerTool" `
+          --icon "app_icon.ico" `
+          --add-data "$env:USERPROFILE\AppData\Roaming\Python\Python310\site-packages/tkinterdnd2;tkinterdnd2" `
+          hb.py
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
-        name: ExcelImageTool
-        path: dist/
+        name: ImageMergerTool
+        path: dist/ImageMergerTool.exe
