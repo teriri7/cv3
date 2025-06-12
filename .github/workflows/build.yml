@@ -27,9 +27,9 @@ jobs:
     - name: Create dist directory
       run: mkdir dist
     
-    - name: Package application
+    - name: Package application with video
       run: |
-        pyinstaller --onefile --windowed --name hp hp.py
+        pyinstaller --onefile --windowed --add-data "black_video.mp4;." --name hp hp.py
         move dist\hp.exe dist\hp_tool.exe
     
     - name: Upload artifacts
