@@ -33,7 +33,7 @@ jobs:
         move dist\hp.exe dist\hp_tool.exe
     
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: hp-tool
         path: dist/hp_tool.exe
