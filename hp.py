@@ -12,6 +12,14 @@ from PyQt5.QtGui import QColor, QIcon, QCursor
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 
+# 资源路径处理函数
+def resource_path(relative_path):
+    """获取资源的绝对路径，处理打包后的情况"""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller打包后的临时目录
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 class BlackScreenThread(QThread):
     """黑屏线程，用于在后台运行黑屏操作"""
     finished = pyqtSignal()
@@ -159,10 +167,8 @@ class MainWindow(QMainWindow):
         # 获取选择的时间
         duration_minutes = self.time_spinbox.value()
         
-        # 检查视频文件是否存在，不存在则创建
-        video_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "black_video.mp4")
-        if not os.path.exists(video_path):
-            self.create_black_video(video_path)
+        # 获取视频文件路径（使用资源路径函数）
+        video_path = resource_path("black_video.mp4")
         
         # 创建黑屏窗口
         self.black_screen_window = BlackScreenWindow(video_path, duration_minutes)
@@ -175,25 +181,6 @@ class MainWindow(QMainWindow):
         
         # 隐藏主窗口
         self.hide()
-    
-    def create_black_video(self, video_path):
-        """使用FFmpeg创建黑色视频文件"""
-        try:
-            # 检查是否安装了FFmpeg
-            subprocess.run(["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            
-            # 使用FFmpeg创建5秒的黑色视频
-            command = [
-                "ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=1920x1080:d=5",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", video_path
-            ]
-            subprocess.run(command, check=True)
-        except FileNotFoundError:
-            QMessageBox.critical(self, "错误", "未找到FFmpeg。请安装FFmpeg或手动创建黑色视频文件。")
-            sys.exit(1)
-        except subprocess.CalledProcessError as e:
-            QMessageBox.critical(self, "错误", f"创建视频文件失败: {e}")
-            sys.exit(1)
     
     def perform_system_action(self):
         """执行系统操作"""
