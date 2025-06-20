@@ -1,31 +1,62 @@
-@echo off
-setlocal
+name: Build Video Merger Executable
 
-:: 1. 安装依赖
-pip install pyinstaller pillow tkinterdnd2
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-:: 2. 下载FFmpeg（如果不存在）
-if not exist "ffmpeg" (
-    echo Downloading FFmpeg...
-    curl -L -o ffmpeg.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip
-    tar -xf ffmpeg.zip
-    ren ffmpeg-master-latest-win64-gpl ffmpeg
-    del ffmpeg.zip
-)
+jobs:
+  build-windows:
+    runs-on: windows-latest
 
-:: 3. 构建可执行文件
-pyinstaller --onefile --windowed ^
-    --name "VideoMergerTool" ^
-    --icon "video_icon.ico" ^
-    --add-data "ffmpeg;ffmpeg" ^
-    --add-data "%APPDATA%\Python\Python310\site-packages\tkinterdnd2;tkinterdnd2" ^
-    video_merger.py
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-:: 4. 复制文件到发布目录
-mkdir release 2>nul
-copy dist\VideoMergerTool.exe release
-xcopy /E /I ffmpeg release\ffmpeg
-copy video_merger.py release
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-echo 构建完成！请查看 release 文件夹
-endlocal
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller pillow tkinterdnd2
+
+    - name: Add pyinstaller to PATH
+      run: echo "$env:USERPROFILE\AppData\Roaming\Python\Python310\Scripts" >> $env:GITHUB_PATH
+
+    - name: Download FFmpeg for Windows
+      run: |
+        $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+        Invoke-WebRequest -Uri $ffmpegUrl -OutFile ffmpeg.zip
+        Expand-Archive ffmpeg.zip -DestinationPath .
+        Rename-Item -Path "ffmpeg-master-latest-win64-gpl" -NewName "ffmpeg"
+        Remove-Item ffmpeg.zip
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed `
+          --name "VideoMergerTool" `
+          --icon "video_icon.ico" `
+          --add-data "ffmpeg;ffmpeg" `
+          --add-data "$env:USERPROFILE\AppData\Roaming\Python\Python310\site-packages/tkinterdnd2;tkinterdnd2" `
+          video_merger.py
+
+    - name: Create release package
+      run: |
+        mkdir release
+        copy dist\VideoMergerTool.exe release
+        xcopy /E /I ffmpeg release\ffmpeg
+        copy video_merger.py release
+        echo "视频合并工具 - 使用说明" > release\README.txt
+        echo "1. 运行 VideoMergerTool.exe" >> release\README.txt
+        echo "2. 将视频文件拖放到程序窗口中" >> release\README.txt
+        echo "3. 程序会自动合并视频并保存到源文件夹" >> release\README.txt
+        echo "4. 需要保持 ffmpeg 文件夹与程序在同一目录" >> release\README.txt
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: VideoMergerTool
+        path: release
