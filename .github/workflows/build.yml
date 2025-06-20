@@ -11,10 +11,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
@@ -48,15 +48,16 @@ jobs:
         mkdir release
         copy dist\VideoMergerTool.exe release
         xcopy /E /I ffmpeg release\ffmpeg
-        copy video_merger.py release
         echo "视频合并工具 - 使用说明" > release\README.txt
         echo "1. 运行 VideoMergerTool.exe" >> release\README.txt
         echo "2. 将视频文件拖放到程序窗口中" >> release\README.txt
         echo "3. 程序会自动合并视频并保存到源文件夹" >> release\README.txt
         echo "4. 需要保持 ffmpeg 文件夹与程序在同一目录" >> release\README.txt
+        echo "" >> release\README.txt
+        echo "注意：首次运行时可能会稍慢，请耐心等待" >> release\README.txt
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: VideoMergerTool
         path: release
