@@ -22,6 +22,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller pillow tkinterdnd2
+        
+        # 查找 tkinterdnd2 安装位置
+        python -c "import os, tkinterdnd2; print(os.path.dirname(tkinterdnd2.__file__))" > tkinterdnd2_path.txt
+
+    - name: Get tkinterdnd2 path
+      id: get_tkinterdnd2_path
+      run: |
+        $path = Get-Content -Path tkinterdnd2_path.txt
+        echo "tkinterdnd2_path=$path" >> $env:GITHUB_OUTPUT
 
     - name: Add pyinstaller to PATH
       run: echo "$env:USERPROFILE\AppData\Roaming\Python\Python310\Scripts" >> $env:GITHUB_PATH
@@ -38,9 +47,8 @@ jobs:
       run: |
         pyinstaller --onefile --windowed `
           --name "VideoMergerTool" `
-          --icon "video_icon.ico" `
           --add-data "ffmpeg;ffmpeg" `
-          --add-data "$env:USERPROFILE\AppData\Roaming\Python\Python310\site-packages/tkinterdnd2;tkinterdnd2" `
+          --add-data "${{ steps.get_tkinterdnd2_path.outputs.tkinterdnd2_path }};tkinterdnd2" `
           video_merger.py
 
     - name: Create release package
