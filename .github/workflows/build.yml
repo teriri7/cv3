@@ -24,16 +24,29 @@ jobs:
         pip install pyinstaller pyqt5 pynput
         
     - name: Build executable
-      shell: cmd
       run: |
-        pyinstaller --onefile --windowed --name "FKeyAutoClicker" ^
-          --icon "NONE" ^
-          --add-data "%VIRTUAL_ENV%\Lib\site-packages\PyQt5\Qt5\plugins;PyQt5/Qt5/plugins" ^
-          --add-data "%VIRTUAL_ENV%\Lib\site-packages\PyQt5\Qt5\bin;PyQt5/Qt5/bin" ^
-          --hidden-import "pynput.keyboard._win32" ^
-          --hidden-import "pynput.mouse._win32" ^
-          --collect-all PyQt5 ^
+        # 获取PyQt5路径并构建
+        $pyqt_path = python -c "import os, PyQt5; print(os.path.dirname(PyQt5.__file__))"
+        Write-Host "PyQt5路径: $pyqt_path"
+        
+        pyinstaller --onefile --windowed --name "FKeyAutoClicker" `
+          --icon "NONE" `
+          --add-data "$pyqt_path\Qt5\plugins;PyQt5/Qt5/plugins" `
+          --add-data "$pyqt_path\Qt5\bin;PyQt5/Qt5/bin" `
+          --hidden-import "pynput.keyboard._win32" `
+          --hidden-import "pynput.mouse._win32" `
+          --collect-all PyQt5 `
           f.py
+
+    - name: Verify build
+      run: |
+        if (Test-Path "dist\FKeyAutoClicker.exe") {
+          Write-Host "构建成功！"
+        } else {
+          Write-Host "构建失败！"
+          Get-ChildItem -Recurse
+          exit 1
+        }
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
