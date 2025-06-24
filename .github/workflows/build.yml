@@ -1,71 +1,39 @@
-name: Build Video Merger Executable
+name: Build Windows Executable
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller pillow tkinterdnd2
-        
-        # 查找 tkinterdnd2 安装位置
-        python -c "import os, tkinterdnd2; print(os.path.dirname(tkinterdnd2.__file__))" > tkinterdnd2_path.txt
-
-    - name: Get tkinterdnd2 path
-      id: get_tkinterdnd2_path
-      run: |
-        $path = Get-Content -Path tkinterdnd2_path.txt
-        echo "tkinterdnd2_path=$path" >> $env:GITHUB_OUTPUT
-
-    - name: Add pyinstaller to PATH
-      run: echo "$env:USERPROFILE\AppData\Roaming\Python\Python310\Scripts" >> $env:GITHUB_PATH
-
-    - name: Download FFmpeg for Windows
-      run: |
-        $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
-        Invoke-WebRequest -Uri $ffmpegUrl -OutFile ffmpeg.zip
-        Expand-Archive ffmpeg.zip -DestinationPath .
-        Rename-Item -Path "ffmpeg-master-latest-win64-gpl" -NewName "ffmpeg"
-        Remove-Item ffmpeg.zip
+        pip install pyinstaller pyqt5 pynput
 
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed `
-          --name "VideoMergerTool" `
-          --add-data "ffmpeg;ffmpeg" `
-          --add-data "${{ steps.get_tkinterdnd2_path.outputs.tkinterdnd2_path }};tkinterdnd2" `
-          video_merger.py
-
-    - name: Create release package
-      run: |
-        mkdir release
-        copy dist\VideoMergerTool.exe release
-        xcopy /E /I ffmpeg release\ffmpeg
-        echo "视频合并工具 - 使用说明" > release\README.txt
-        echo "1. 运行 VideoMergerTool.exe" >> release\README.txt
-        echo "2. 将视频文件拖放到程序窗口中" >> release\README.txt
-        echo "3. 程序会自动合并视频并保存到源文件夹" >> release\README.txt
-        echo "4. 需要保持 ffmpeg 文件夹与程序在同一目录" >> release\README.txt
-        echo "" >> release\README.txt
-        echo "注意：首次运行时可能会稍慢，请耐心等待" >> release\README.txt
+        pyinstaller --onefile --windowed --name "FKeyAutoClicker" ^
+          --icon "NONE" ^
+          --add-data "venv/Lib/site-packages/PyQt5/Qt5/plugins;PyQt5/Qt5/plugins" ^
+          --hidden-import "pynput.keyboard._win32" ^
+          --hidden-import "pynput.mouse._win32" ^
+          f.py
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
-        name: VideoMergerTool
-        path: release
+        name: FKeyAutoClicker
+        path: dist/
