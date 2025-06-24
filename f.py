@@ -3,9 +3,10 @@ import time
 import threading
 from pynput import keyboard, mouse
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                             QLabel, QLineEdit, QPushButton, QGroupBox, QStyleFactory)
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QPalette, QColor, QFont
+                             QLabel, QLineEdit, QPushButton, QGroupBox, QStyleFactory,
+                             QDoubleValidator)
+from PyQt5.QtCore import Qt, QTimer, QLocale
+from PyQt5.QtGui import QPalette, QColor, QFont, QDoubleValidator
 
 class AutoClickerApp(QMainWindow):
     def __init__(self):
@@ -88,7 +89,12 @@ class AutoClickerApp(QMainWindow):
         interval_row = QHBoxLayout()
         interval_label = QLabel("点击间隔 (秒):")
         self.interval_input = QLineEdit("0.5")
-        self.interval_input.setValidator(QApplication.instance().locale().createDoubleValidator(0.01, 10.0, 2))
+        
+        # 修复验证器问题
+        validator = QDoubleValidator(0.01, 10.0, 2)
+        validator.setNotation(QDoubleValidator.StandardNotation)
+        self.interval_input.setValidator(validator)
+        
         interval_row.addWidget(interval_label)
         interval_row.addWidget(self.interval_input)
         
