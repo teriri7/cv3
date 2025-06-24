@@ -29,12 +29,18 @@ jobs:
         $pyqt_path = python -c "import os, PyQt5; print(os.path.dirname(PyQt5.__file__))"
         Write-Host "PyQt5路径: $pyqt_path"
         
+        # 确保使用正确的路径格式
+        $pyqt_plugins = "$pyqt_path\Qt5\plugins"
+        $pyqt_bin = "$pyqt_path\Qt5\bin"
+        
+        # 构建命令
         pyinstaller --onefile --windowed --name "FKeyAutoClicker" `
           --icon "NONE" `
-          --add-data "$pyqt_path\Qt5\plugins;PyQt5/Qt5/plugins" `
-          --add-data "$pyqt_path\Qt5\bin;PyQt5/Qt5/bin" `
+          --add-data "$pyqt_plugins;PyQt5/Qt5/plugins" `
+          --add-data "$pyqt_bin;PyQt5/Qt5/bin" `
           --hidden-import "pynput.keyboard._win32" `
           --hidden-import "pynput.mouse._win32" `
+          --hidden-import "PyQt5.sip" `
           --collect-all PyQt5 `
           f.py
 
@@ -42,9 +48,13 @@ jobs:
       run: |
         if (Test-Path "dist\FKeyAutoClicker.exe") {
           Write-Host "构建成功！"
+          Write-Host "可执行文件大小: $((Get-Item 'dist\FKeyAutoClicker.exe').Length / 1MB) MB"
         } else {
           Write-Host "构建失败！"
-          Get-ChildItem -Recurse
+          Write-Host "当前目录内容:"
+          Get-ChildItem
+          Write-Host "dist目录内容:"
+          Get-ChildItem -Path dist -ErrorAction SilentlyContinue
           exit 1
         }
 
