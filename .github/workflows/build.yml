@@ -33,13 +33,16 @@ jobs:
         $pyqt_plugins = "$pyqt_path\Qt5\plugins"
         $pyqt_bin = "$pyqt_path\Qt5\bin"
         
-        # 构建命令
+        # 构建命令 - 添加更多隐藏导入
         pyinstaller --onefile --windowed --name "FKeyAutoClicker" `
           --icon "NONE" `
           --add-data "$pyqt_plugins;PyQt5/Qt5/plugins" `
           --add-data "$pyqt_bin;PyQt5/Qt5/bin" `
           --hidden-import "pynput.keyboard._win32" `
           --hidden-import "pynput.mouse._win32" `
+          --hidden-import "PyQt5.QtCore" `
+          --hidden-import "PyQt5.QtGui" `
+          --hidden-import "PyQt5.QtWidgets" `
           --hidden-import "PyQt5.sip" `
           --collect-all PyQt5 `
           f.py
