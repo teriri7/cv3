@@ -3,10 +3,9 @@ import time
 import threading
 from pynput import keyboard, mouse
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                             QLabel, QLineEdit, QPushButton, QGroupBox, QStyleFactory,
-                             QDoubleValidator)
-from PyQt5.QtCore import Qt, QTimer, QLocale
-from PyQt5.QtGui import QPalette, QColor, QFont, QDoubleValidator
+                             QLabel, QLineEdit, QPushButton, QGroupBox, QStyleFactory)
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QPalette, QColor, QFont, QDoubleValidator  # 修复导入位置
 
 class AutoClickerApp(QMainWindow):
     def __init__(self):
@@ -177,9 +176,13 @@ class AutoClickerApp(QMainWindow):
     
     def click_loop(self, interval):
         while self.clicking:
-            self.keyboard_controller.press('f')
-            self.keyboard_controller.release('f')
-            time.sleep(interval)
+            try:
+                self.keyboard_controller.press('f')
+                self.keyboard_controller.release('f')
+                time.sleep(interval)
+            except Exception as e:
+                print(f"连点错误: {e}")
+                break
     
     def start_hotkey_recording(self):
         self.hotkey_button.setText("正在监听...")
