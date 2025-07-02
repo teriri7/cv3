@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageOps
 import os
@@ -10,7 +10,7 @@ class ImageMergerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("图片合并工具")
-        self.root.geometry("650x550")
+        self.root.geometry("600x500")
         self.root.configure(bg='#f0f0f0')
         
         # 设置应用样式
@@ -23,8 +23,8 @@ class ImageMergerApp:
         
         # 支持的图片格式
         self.supported_formats = ('.jpg', '.jpeg', '.png', '.webp')
+        self.max_images = 12  # 增加最大图片数量以支持网格合并
         self.merge_mode = tk.StringVar(value="horizontal")  # 默认为横向合并
-        self.output_format = tk.StringVar(value="jpg")  # 默认为jpg格式
 
         # 创建GUI组件
         self.create_widgets()
@@ -45,30 +45,20 @@ class ImageMergerApp:
         ttk.Label(mode_frame, text="选择合并方式:", font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
         
         ttk.Radiobutton(
-            mode_frame, text="横向合并 (一行排列)", 
+            mode_frame, text="横向合并", 
             variable=self.merge_mode, value="horizontal"
-        ).pack(side=tk.LEFT, padx=10)
+        ).pack(side=tk.LEFT, padx=5)
         
         ttk.Radiobutton(
-            mode_frame, text="方形合并 (每行2张)", 
+            mode_frame, text="方形合并 (2×2)", 
             variable=self.merge_mode, value="square"
-        ).pack(side=tk.LEFT, padx=10)
+        ).pack(side=tk.LEFT, padx=5)
         
-        # 输出格式选择区域
-        format_frame = ttk.Frame(main_frame)
-        format_frame.pack(fill=tk.X, pady=10)
-        
-        ttk.Label(format_frame, text="选择输出格式:", font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 10))
-        
+        # 添加新的网格合并选项
         ttk.Radiobutton(
-            format_frame, text="JPG", 
-            variable=self.output_format, value="jpg"
-        ).pack(side=tk.LEFT, padx=10)
-        
-        ttk.Radiobutton(
-            format_frame, text="PNG", 
-            variable=self.output_format, value="png"
-        ).pack(side=tk.LEFT, padx=10)
+            mode_frame, text="网格合并 (3×n)", 
+            variable=self.merge_mode, value="grid3"
+        ).pack(side=tk.LEFT, padx=5)
         
         # 添加分隔线
         ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
@@ -79,14 +69,13 @@ class ImageMergerApp:
         
         self.drop_label = tk.Label(
             drop_frame, 
-            text="拖放图片到这里 (支持任意数量)", 
+            text="拖放图片到这里 (最多12张)",  # 更新提示文本
             relief="groove", 
             height=8, 
             width=50,
             bg='white',
             fg='#555555',
             font=('Arial', 10)
-        )
         self.drop_label.pack(fill=tk.BOTH, expand=True)
         
         # 绑定拖放事件
@@ -104,31 +93,23 @@ class ImageMergerApp:
         
         self.log_text = tk.Text(
             log_frame, 
-            height=10, 
+            height=8, 
             state='disabled',
             bg='white',
             fg='#333333',
             font=('Arial', 9)
-        )
         self.log_text.pack(fill=tk.BOTH, expand=True)
         
         # 添加滚动条
         scrollbar = ttk.Scrollbar(log_frame, command=self.log_text.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.log_text.config(yscrollcommand=scrollbar.set)
-        
-        # 状态栏
-        self.status_var = tk.StringVar(value="就绪")
-        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
-        status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def log_message(self, message):
         self.log_text.config(state='normal')
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
         self.log_text.config(state='disabled')
-        self.status_var.set(message)
-        self.root.update()
 
     def handle_drop(self, event):
         files = self.root.tk.splitlist(event.data)
@@ -145,35 +126,50 @@ class ImageMergerApp:
             return
             
         selected_mode = self.merge_mode.get()
-        selected_format = self.output_format.get()
+        mode_names = {
+            "horizontal": "横向合并",
+            "square": "方形合并 (2×2)",
+            "grid3": "网格合并 (3×n)"
+        }
         
+        # 检查不同模式下的图片数量要求
+        if selected_mode == "square":
+            if len(valid_files) != 4:
+                self.log_message("错误：方形合并需要恰好4张图片")
+                return
+        elif selected_mode == "grid3":
+            if len(valid_files) < 3:
+                self.log_message("错误：网格合并至少需要3张图片")
+                return
+        elif len(valid_files) > self.max_images:
+            self.log_message(f"错误：最多支持{self.max_images}张图片")
+            valid_files = valid_files[:self.max_images]
+
         self.log_message(f"开始处理 {len(valid_files)} 张图片...")
-        self.log_message(f"合并模式: {'横向合并' if selected_mode == 'horizontal' else '方形合并 (每行2张)'}")
-        self.log_message(f"输出格式: {selected_format.upper()}")
+        self.log_message(f"合并模式: {mode_names[selected_mode]}")
         
         try:
-            output_path = self.merge_images(valid_files, selected_mode, selected_format)
+            output_path = self.merge_images(valid_files, selected_mode)
             self.log_message(f"合并成功！保存路径: {output_path}")
         except Exception as e:
             self.log_message(f"处理出错: {str(e)}")
-            messagebox.showerror("错误", f"处理过程中发生错误:\n{str(e)}")
 
-    def merge_images(self, file_paths, mode, output_format):
-        if mode == "horizontal":
-            return self.merge_horizontal(file_paths, output_format)
-        elif mode == "square":
-            return self.merge_square(file_paths, output_format)
-    
-    def merge_horizontal(self, file_paths, output_format):
+    def merge_images(self, file_paths, mode):
         images = []
-        max_height = 0
-        
-        # 第一遍：加载所有图片并找到最大高度
         for path in file_paths:
             img = Image.open(path)
             images.append(img)
-            if img.height > max_height:
-                max_height = img.height
+        
+        if mode == "horizontal":
+            return self.merge_horizontal(images, file_paths)
+        elif mode == "square":
+            return self.merge_square(images, file_paths)
+        elif mode == "grid3":
+            return self.merge_grid3(images, file_paths)
+    
+    def merge_horizontal(self, images, file_paths):
+        # 计算所有图片的最大高度
+        max_height = max(img.height for img in images)
         
         # 调整所有图片到相同高度
         resized_images = []
@@ -186,13 +182,8 @@ class ImageMergerApp:
         # 计算总宽度
         total_width = sum(img.width for img in resized_images)
         
-        # 根据输出格式决定背景色
-        if output_format == "png":
-            # PNG支持透明，使用RGBA模式
-            merged_img = Image.new('RGBA', (total_width, max_height), (255, 255, 255, 0))
-        else:
-            # JPG不支持透明，使用白色背景
-            merged_img = Image.new('RGB', (total_width, max_height), (255, 255, 255))
+        # 创建新图片
+        merged_img = Image.new('RGB', (total_width, max_height), (255, 255, 255))
         
         # 拼接图片
         x_offset = 0
@@ -200,43 +191,57 @@ class ImageMergerApp:
             merged_img.paste(img, (x_offset, 0))
             x_offset += img.width
             
-        return self.save_image(merged_img, file_paths[0], output_format)
+        return self.save_image(merged_img, file_paths[0])
     
-    def merge_square(self, file_paths, output_format):
-        images = []
-        max_width = 0
-        max_height = 0
+    def merge_square(self, images, file_paths):
+        # 计算网格中每个单元格的大小
+        cell_width = max(img.width for img in images)
+        cell_height = max(img.height for img in images)
         
-        # 第一遍：加载所有图片并找到最大宽度和高度
-        for path in file_paths:
-            img = Image.open(path)
-            images.append(img)
-            if img.width > max_width:
-                max_width = img.width
-            if img.height > max_height:
-                max_height = img.height
+        # 创建2x2网格
+        grid_width = cell_width * 2
+        grid_height = cell_height * 2
         
-        # 计算网格尺寸
-        cols = 2  # 每行2张图片
-        rows = math.ceil(len(images) / cols)
-        
-        # 计算总尺寸
-        total_width = max_width * cols
-        total_height = max_height * rows
-        
-        # 根据输出格式决定背景色
-        if output_format == "png":
-            # PNG支持透明，使用RGBA模式
-            merged_img = Image.new('RGBA', (total_width, total_height), (255, 255, 255, 0))
-        else:
-            # JPG不支持透明，使用白色背景
-            merged_img = Image.new('RGB', (total_width, total_height), (255, 255, 255))
+        # 创建新图片
+        merged_img = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
         
         # 将图片放置到网格中
+        positions = [
+            (0, 0),             # 第一行第一列
+            (cell_width, 0),     # 第一行第二列
+            (0, cell_height),    # 第二行第一列
+            (cell_width, cell_height)  # 第二行第二列
+        ]
+        
         for i, img in enumerate(images):
-            # 计算位置
-            row = i // cols
-            col = i % cols
+            # 调整图片大小以适应网格单元格
+            resized_img = ImageOps.pad(img, (cell_width, cell_height), color='white', method=Image.LANCZOS)
+            merged_img.paste(resized_img, positions[i])
+            
+        return self.save_image(merged_img, file_paths[0])
+    
+    def merge_grid3(self, images, file_paths):
+        # 计算网格的行数（每行3张图片）
+        num_images = len(images)
+        rows = math.ceil(num_images / 3)
+        
+        # 计算所有图片的最大宽度和高度
+        max_width = max(img.width for img in images)
+        max_height = max(img.height for img in images)
+        
+        # 创建网格图片
+        grid_width = max_width * 3
+        grid_height = max_height * rows
+        
+        merged_img = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
+        
+        # 按顺序放置图片
+        for i, img in enumerate(images):
+            # 计算当前图片的位置
+            row = i // 3
+            col = i % 3
+            
+            # 计算坐标
             x = col * max_width
             y = row * max_height
             
@@ -244,31 +249,26 @@ class ImageMergerApp:
             resized_img = ImageOps.pad(img, (max_width, max_height), color='white', method=Image.LANCZOS)
             merged_img.paste(resized_img, (x, y))
             
-        return self.save_image(merged_img, file_paths[0], output_format)
+        return self.save_image(merged_img, file_paths[0])
     
-    def save_image(self, image, reference_path, output_format):
+    def save_image(self, image, reference_path):
         # 获取第一个图片所在目录
         output_dir = os.path.dirname(reference_path)
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         
-        # 根据合并模式生成文件名
+        # 根据模式生成文件名
+        mode_names = {
+            "horizontal": "horizontal",
+            "square": "square",
+            "grid3": "grid3"
+        }
         mode = self.merge_mode.get()
-        if mode == "horizontal":
-            mode_str = "horizontal"
-        else:
-            mode_str = "grid"
+        output_filename = f"merged_{mode_names[mode]}_{timestamp}.jpg"
         
-        output_filename = f"merged_{mode_str}_{timestamp}.{output_format}"
         output_path = os.path.join(output_dir, output_filename)
         
-        # 根据输出格式设置保存参数
-        if output_format == "png":
-            # PNG保存
-            image.save(output_path, format="PNG")
-        else:
-            # JPG保存，设置质量为100
-            image.save(output_path, format="JPEG", quality=100, subsampling=0)
-            
+        # 设置质量为100
+        image.save(output_path, quality=100, subsampling=0)
         return output_path
 
 if __name__ == '__main__':
