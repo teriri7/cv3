@@ -23,18 +23,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyinstaller pillow tkinterdnd2
         
-    - name: Find tkinterdnd2 path
-      id: find-tkinterdnd2
+    - name: Get tkinterdnd2 path
+      id: get-tkdnd-path
       run: |
         $tkdndPath = python -c "import os, tkinterdnd2; print(os.path.dirname(tkinterdnd2.__file__))"
-        echo "tkinterdnd2_path=$tkdndPath" >> $env:GITHUB_OUTPUT
+        echo "tkdnd_path=$tkdndPath" >> $env:GITHUB_OUTPUT
 
     - name: Build executable
       run: |
+        $tkdndPath = "${{ steps.get-tkdnd-path.outputs.tkdnd_path }}"
         pyinstaller --onefile --windowed `
           --name "ImageMergerTool" `
           --icon "app_icon.ico" `
-          --add-data "${{ steps.find-tkinterdnd2.outputs.tkinterdnd2_path };tkinterdnd2" `
+          --add-data "$tkdndPath;tkinterdnd2" `
           --hidden-import="PIL._tkinter_finder" `
           hb.py
 
