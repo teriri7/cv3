@@ -69,13 +69,14 @@ class ImageMergerApp:
         
         self.drop_label = tk.Label(
             drop_frame, 
-            text="拖放图片到这里 (最多12张)",  # 更新提示文本
+            text="拖放图片到这里 (最多12张)",
             relief="groove", 
             height=8, 
             width=50,
             bg='white',
             fg='#555555',
-            font=('Arial', 10)
+            font=('Arial', 10)  # 修复语法错误：移除多余的括号
+        )
         self.drop_label.pack(fill=tk.BOTH, expand=True)
         
         # 绑定拖放事件
@@ -208,8 +209,8 @@ class ImageMergerApp:
         # 将图片放置到网格中
         positions = [
             (0, 0),             # 第一行第一列
-            (cell_width, 0),     # 第一行第二列
-            (0, cell_height),    # 第二行第一列
+            (cell_width, 0),    # 第一行第二列
+            (0, cell_height),   # 第二行第一列
             (cell_width, cell_height)  # 第二行第二列
         ]
         
