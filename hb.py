@@ -75,7 +75,7 @@ class ImageMergerApp:
             width=50,
             bg='white',
             fg='#555555',
-            font=('Arial', 10)  # 修复语法错误：移除多余的括号
+            font=('Arial', 10)
         )
         self.drop_label.pack(fill=tk.BOTH, expand=True)
         
@@ -99,6 +99,7 @@ class ImageMergerApp:
             bg='white',
             fg='#333333',
             font=('Arial', 9)
+        )  # 修复这里：添加了缺失的右括号
         self.log_text.pack(fill=tk.BOTH, expand=True)
         
         # 添加滚动条
