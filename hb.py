@@ -52,7 +52,7 @@ class ImageMergerApp:
         ).pack(side=tk.LEFT, padx=5)
         
         ttk.Radiobutton(
-            mode_frame, text="方形合并 (2×2)", 
+            mode_frame, text="网格合并 (2×n)", 
             variable=self.merge_mode, value="square"
         ).pack(side=tk.LEFT, padx=5)
         
@@ -62,7 +62,7 @@ class ImageMergerApp:
         ).pack(side=tk.LEFT, padx=5)
         
         ttk.Radiobutton(
-            mode_frame, text="网格合并 (4×4)", 
+            mode_frame, text="网格合并 (4×n)", 
             variable=self.merge_mode, value="grid4"
         ).pack(side=tk.LEFT, padx=5)
         
@@ -152,14 +152,14 @@ class ImageMergerApp:
         selected_mode = self.merge_mode.get()
         mode_names = {
             "horizontal": "横向合并",
-            "square": "方形合并 (2×2)",
+            "square": "网格合并 (2×n)",
             "grid3": "网格合并 (3×n)",
-            "grid4": "网格合并 (4×4)"
+            "grid4": "网格合并 (4×n)"
         }
         
         # 检查不同模式下的图片数量要求
         if selected_mode == "grid4" and len(valid_files) < 1:
-            self.log_message("错误：网格合并(4×4)至少需要1张图片")
+            self.log_message("错误：网格合并(4×n)至少需要1张图片")
             return
         
         # 排序图片：如果所有文件名都是纯数字，则按数字排序，否则按文件名排序
