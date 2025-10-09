@@ -250,7 +250,7 @@ class VideoScreenshotTool:
         self.status_var.set("就绪")
 
 if __name__ == "__main__":
-    # 设置DPI感知，改善高DPI显示器的显示效果
+    # 设置DPI感知。改善高DPI显示器的显示效果
     if os.name == 'nt':
         from ctypes import windll
         windll.shcore.SetProcessDpiAwareness(1)
