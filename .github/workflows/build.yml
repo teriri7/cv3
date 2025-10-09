@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -24,73 +24,27 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        pip install tkinter  # 虽然tkinter通常是内置的，但确保安装
         
     - name: Download FFmpeg
       run: |
-        # 创建目录结构
         New-Item -ItemType Directory -Force -Path "ffmpeg/bin"
-        
-        # 下载 FFmpeg (使用官方构建)
         Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile "ffmpeg.7z"
-        
-        # 安装 7-Zip 来解压
         choco install 7zip -y
-        
-        # 解压 FFmpeg
         & "C:\Program Files\7-Zip\7z.exe" x ffmpeg.7z -offmpeg_temp
-        
-        # 查找并复制 ffmpeg.exe
         $ffmpegExe = Get-ChildItem -Path "ffmpeg_temp" -Recurse -Filter "ffmpeg.exe" | Select-Object -First 1
         Copy-Item $ffmpegExe.FullName -Destination "ffmpeg/bin/ffmpeg.exe"
-        
-        # 清理临时文件
         Remove-Item -Recurse -Force ffmpeg_temp
         Remove-Item ffmpeg.7z
         
     - name: Build with PyInstaller
       run: |
-        # 创建 spec 文件或直接使用 PyInstaller
-        pyinstaller --onefile --windowed --name "VideoScreenshotTool" --add-data "ffmpeg;ffmpeg" --icon=ffmpeg.ico ffmpeg.py
-      env:
-        # 设置 PyInstaller 缓存目录
-        PYINSTALLER_CONFIG_DIR: ${{ github.workspace }}/pyinstaller_cache
-        
-    - name: Test the executable
-      run: |
-        # 简单测试生成的 exe 文件是否存在
-        if (Test-Path "dist/VideoScreenshotTool.exe") {
-          Write-Host "✅ Executable built successfully!"
-        } else {
-          Write-Host "❌ Executable build failed!"
-          exit 1
-        }
+        pyinstaller --onefile --windowed --name "VideoScreenshotTool" --add-data "ffmpeg;ffmpeg" ffmpeg.py
         
     - name: Create release package
       run: |
-        # 创建发布目录
         New-Item -ItemType Directory -Force -Path "release"
-        
-        # 复制可执行文件和 ffmpeg
         Copy-Item "dist/VideoScreenshotTool.exe" -Destination "release/"
         Copy-Item -Recurse "ffmpeg" -Destination "release/"
-        
-        # 创建说明文件
-        @"
-视频分片截图工具 - 使用说明
-
-1. 运行 VideoScreenshotTool.exe 启动程序
-2. 程序会自动检测当前目录下的视频文件
-3. 设置截图间隔时间（秒）
-4. 点击"开始截图"按钮
-5. 程序会为每个视频创建单独的文件夹存放截图
-
-支持的视频格式: mp4, mkv, avi, mov, wmv, flv, webm, m4v, 3gp
-
-注意: 程序需要 ffmpeg 组件，已包含在当前目录的 ffmpeg 文件夹中。
-"@ | Out-File -FilePath "release/README.txt" -Encoding UTF8
-        
-        # 压缩发布文件
         & "C:\Program Files\7-Zip\7z.exe" a -t7z "VideoScreenshotTool_Windows.7z" "release/*"
         
     - name: Upload artifact
@@ -99,23 +53,3 @@ jobs:
         name: VideoScreenshotTool-Windows
         path: VideoScreenshotTool_Windows.7z
         retention-days: 30
-        
-    - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: VideoScreenshotTool_Windows.7z
-        body: |
-          Windows 视频分片截图工具
-          
-          ## 功能特点
-          - 自动检测文件夹内所有视频文件
-          - 按设定间隔自动截图
-          - 为每个视频创建独立截图文件夹
-          - 内置 FFmpeg，无需额外安装
-          
-          ## 使用说明
-          1. 解压下载的压缩包
-          2. 运行 VideoScreenshotTool.exe
-          3. 将视频文件放在程序同一目录下
-          4. 设置截图间隔并开始截图
