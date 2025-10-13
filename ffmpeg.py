@@ -11,7 +11,7 @@ class VideoScreenshotTool:
     def __init__(self, root):
         self.root = root
         self.root.title("视频分片截图工具")
-        self.root.geometry("500x350")
+        self.root.geometry("550x450")  # 增加高度以容纳新选项
         self.root.resizable(False, False)
         
         # 设置现代主题颜色
@@ -52,8 +52,9 @@ class VideoScreenshotTool:
     def check_ffmpeg(self):
         """检查ffmpeg是否可用"""
         try:
+            # 使用UTF-8编码运行命令，避免编码错误
             result = subprocess.run([self.ffmpeg_path, "-version"], 
-                                  capture_output=True, text=True, timeout=5)
+                                  capture_output=True, text=True, timeout=5, encoding='utf-8', errors='ignore')
             if result.returncode == 0:
                 version_match = re.search(r"ffmpeg version (\S+)", result.stdout)
                 version = version_match.group(1) if version_match else "未知版本"
@@ -88,7 +89,7 @@ class VideoScreenshotTool:
         desc_card.pack(fill=tk.X, pady=(0, 15))
         
         desc_label = tk.Label(desc_card, text="该程序会对当前文件夹内的所有视频文件进行分片截图，每个视频文件会生成一个对应的文件夹存放截图。", 
-                             font=self.font, bg="white", wraplength=450, justify=tk.LEFT)
+                             font=self.font, bg="white", wraplength=500, justify=tk.LEFT)
         desc_label.pack(padx=15, pady=12)
         
         # 设置区域卡片
@@ -108,6 +109,44 @@ class VideoScreenshotTool:
         interval_entry = tk.Entry(interval_frame, textvariable=self.interval_var, 
                                  font=self.font, width=8, relief="solid", bd=1)
         interval_entry.pack(side=tk.LEFT)
+        
+        # 输出格式设置
+        format_frame = tk.Frame(settings_card, bg="white")
+        format_frame.pack(fill=tk.X, padx=15, pady=(0, 12))
+        
+        format_label = tk.Label(format_frame, text="输出格式:", 
+                               font=self.font, bg="white", width=12, anchor=tk.W)
+        format_label.pack(side=tk.LEFT)
+        
+        self.format_var = tk.StringVar(value="jpg")
+        format_jpg = tk.Radiobutton(format_frame, text="JPG", variable=self.format_var, 
+                                   value="jpg", font=self.font, bg="white", anchor=tk.W)
+        format_jpg.pack(side=tk.LEFT, padx=(0, 10))
+        
+        format_png = tk.Radiobutton(format_frame, text="PNG", variable=self.format_var, 
+                                   value="png", font=self.font, bg="white", anchor=tk.W)
+        format_png.pack(side=tk.LEFT)
+        
+        # HDR处理选项
+        hdr_frame = tk.Frame(settings_card, bg="white")
+        hdr_frame.pack(fill=tk.X, padx=15, pady=(0, 12))
+        
+        hdr_label = tk.Label(hdr_frame, text="HDR处理:", 
+                            font=self.font, bg="white", width=12, anchor=tk.W)
+        hdr_label.pack(side=tk.LEFT)
+        
+        self.hdr_mode = tk.StringVar(value="auto")
+        hdr_auto = tk.Radiobutton(hdr_frame, text="自动检测", variable=self.hdr_mode, 
+                                 value="auto", font=self.font, bg="white", anchor=tk.W)
+        hdr_auto.pack(side=tk.LEFT, padx=(0, 10))
+        
+        hdr_force = tk.Radiobutton(hdr_frame, text="强制HDR转SDR", variable=self.hdr_mode, 
+                                  value="force", font=self.font, bg="white", anchor=tk.W)
+        hdr_force.pack(side=tk.LEFT, padx=(0, 10))
+        
+        hdr_none = tk.Radiobutton(hdr_frame, text="禁用", variable=self.hdr_mode, 
+                                 value="none", font=self.font, bg="white", anchor=tk.W)
+        hdr_none.pack(side=tk.LEFT)
         
         # FFmpeg状态显示
         ffmpeg_frame = tk.Frame(settings_card, bg="white")
@@ -163,10 +202,14 @@ class VideoScreenshotTool:
         self.run_button.config(state=tk.DISABLED, bg="#BDBDBD")
         self.status_var.set("正在处理...")
         
+        # 获取HDR处理模式和输出格式
+        hdr_mode = self.hdr_mode.get()
+        output_format = self.format_var.get()
+        
         # 在新线程中执行截图操作
-        threading.Thread(target=self.process_videos, args=(interval,), daemon=True).start()
+        threading.Thread(target=self.process_videos, args=(interval, hdr_mode, output_format), daemon=True).start()
     
-    def process_videos(self, interval):
+    def process_videos(self, interval, hdr_mode, output_format):
         try:
             # 获取当前文件夹路径
             current_dir = os.getcwd()
@@ -190,7 +233,7 @@ class VideoScreenshotTool:
             # 处理每个视频文件
             for video_file in video_files:
                 try:
-                    success = self.process_single_video(video_file, interval)
+                    success = self.process_single_video(video_file, interval, hdr_mode, output_format)
                     if success:
                         processed += 1
                     self.root.after(0, lambda: self.status_var.set(f"已处理: {processed}/{total_videos}"))
@@ -209,7 +252,32 @@ class VideoScreenshotTool:
         finally:
             self.root.after(0, self.enable_buttons)
     
-    def process_single_video(self, video_file, interval):
+    def detect_hdr_video(self, video_file):
+        """检测视频是否为HDR格式"""
+        try:
+            cmd = [
+                self.ffmpeg_path,
+                "-i", os.path.abspath(video_file),
+                "-hide_banner"
+            ]
+            # 使用UTF-8编码运行命令，避免编码错误
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            
+            # 检查输出中是否包含HDR相关特征
+            stderr = result.stderr.lower()
+            hdr_indicators = [
+                "bt.2020", "rec.2020",  # HDR色彩空间
+                "pq", "smpte st 2084",   # PQ传输函数
+                "hlg", "arib-std-b67",   # HLG传输函数
+                "hdr10", "hdr10+",       # HDR格式
+                "dolby vision"           # 杜比视界
+            ]
+            
+            return any(indicator in stderr for indicator in hdr_indicators)
+        except:
+            return False
+    
+    def process_single_video(self, video_file, interval, hdr_mode, output_format):
         # 创建视频对应的文件夹
         video_name = os.path.splitext(video_file)[0]
         # 清理文件夹名称，移除非法字符
@@ -217,17 +285,43 @@ class VideoScreenshotTool:
         output_dir = os.path.join(os.getcwd(), video_name)
         os.makedirs(output_dir, exist_ok=True)
         
-        # 构建ffmpeg命令
-        cmd = [
-            self.ffmpeg_path,
-            "-i", os.path.abspath(video_file),
-            "-vf", f"fps=1/{interval}",
-            "-q:v", "2",  # 设置图片质量 (2-31, 2为最高质量)
-            os.path.join(output_dir, f"{video_name}_%04d.jpg")
-        ]
+        # 构建基础ffmpeg命令
+        cmd = [self.ffmpeg_path, "-i", os.path.abspath(video_file)]
         
-        # 执行命令
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # 处理HDR视频
+        is_hdr = False
+        if hdr_mode != "none":
+            is_hdr = self.detect_hdr_video(video_file)
+            if is_hdr:
+                print(f"检测到HDR视频: {video_file}")
+        
+        # 根据HDR模式和处理结果构建滤镜
+        if (hdr_mode == "force" or (hdr_mode == "auto" and is_hdr)):
+            # HDR转SDR的滤镜链
+            vf_filter = (
+                f"fps=1/{interval},"
+                "zscale=t=linear:npl=100,format=gbrpf32le,"
+                "zscale=p=bt709,tonemap=hable:param=1.0,"
+                "zscale=t=bt709:m=bt709:r=pc,format=yuv420p"
+            )
+            cmd.extend(["-vf", vf_filter])
+            print(f"应用HDR转SDR处理: {video_file}")
+        else:
+            # 普通截图
+            cmd.extend(["-vf", f"fps=1/{interval}"])
+        
+        # 根据输出格式设置参数
+        if output_format == "jpg":
+            cmd.extend(["-q:v", "2"])  # JPG质量参数 (2-31, 2为最高质量)
+        else:  # PNG格式
+            cmd.extend(["-compression_level", "6"])  # PNG压缩级别 (0-9, 0为无压缩)
+        
+        # 添加输出文件名
+        output_pattern = os.path.join(output_dir, f"{video_name}_%04d.{output_format}")
+        cmd.append(output_pattern)
+        
+        # 执行命令 - 使用UTF-8编码避免解码错误
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
         
         if result.returncode != 0:
             # 检查是否有已知的错误信息
@@ -250,7 +344,7 @@ class VideoScreenshotTool:
         self.status_var.set("就绪")
 
 if __name__ == "__main__":
-    # 设置DPI感知。改善高DPI显示器的显示效果
+    # 设置DPI感知，改善高DPI显示器的显示效果
     if os.name == 'nt':
         from ctypes import windll
         windll.shcore.SetProcessDpiAwareness(1)
