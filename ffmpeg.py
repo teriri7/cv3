@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox, simpledialog
 from pathlib import Path
 import threading
 import sys
+from datetime import datetime
 
 class VideoScreenshotTool:
     def __init__(self, root):
@@ -202,9 +203,11 @@ class VideoScreenshotTool:
         output_format = self.format_var.get()
         dolby_mode = self.dolby_mode.get()
         
-        threading.Thread(target=self.process_videos, args=(interval, hdr_mode, output_format, dolby_mode), daemon=True).start()
+        current_date = datetime.now().strftime("%m%d")
+        
+        threading.Thread(target=self.process_videos, args=(interval, hdr_mode, output_format, dolby_mode, current_date), daemon=True).start()
     
-    def process_videos(self, interval, hdr_mode, output_format, dolby_mode):
+    def process_videos(self, interval, hdr_mode, output_format, dolby_mode, current_date):
         try:
             current_dir = os.getcwd()
             
@@ -225,7 +228,7 @@ class VideoScreenshotTool:
             
             for video_file in video_files:
                 try:
-                    success = self.process_single_video(video_file, interval, hdr_mode, output_format, dolby_mode)
+                    success = self.process_single_video(video_file, interval, hdr_mode, output_format, dolby_mode, current_date)
                     if success:
                         processed += 1
                     self.root.after(0, lambda: self.status_var.set(f"已处理: {processed}/{total_videos}"))
@@ -283,7 +286,7 @@ class VideoScreenshotTool:
         except:
             return False
     
-    def process_single_video(self, video_file, interval, hdr_mode, output_format, dolby_mode):
+    def process_single_video(self, video_file, interval, hdr_mode, output_format, dolby_mode, current_date):
         video_name = os.path.splitext(video_file)[0]
         video_name = re.sub(r'[<>:"/\\|?*]', '_', video_name)
         output_dir = os.path.join(os.getcwd(), video_name)
@@ -327,7 +330,7 @@ class VideoScreenshotTool:
         else:
             cmd.extend(["-compression_level", "6"])
         
-        output_pattern = os.path.join(output_dir, f"{video_name}_%04d.{output_format}")
+        output_pattern = os.path.join(output_dir, f"{video_name}_%04d.{current_date}.{output_format}")
         cmd.append(output_pattern)
         
         result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
