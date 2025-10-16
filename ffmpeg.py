@@ -330,7 +330,7 @@ class VideoScreenshotTool:
         else:
             cmd.extend(["-compression_level", "6"])
         
-        output_pattern = os.path.join(output_dir, f"{video_name}_%04d.{current_date}.{output_format}")
+        output_pattern = os.path.join(output_dir, f"{video_name}_%04d_{current_date}.{output_format}")
         cmd.append(output_pattern)
         
         result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
