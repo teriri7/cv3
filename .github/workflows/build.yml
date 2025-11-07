@@ -34,11 +34,10 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --name "ImageAnalyzer" --windowed --icon=None x.py
-        # 注意这里已将入口文件改为x.py
+        pyinstaller --onefile --name "ImageAnalyzer" --windowed x.py
+        # 已移除--icon=None参数，默认不使用图标
         # --windowed 确保运行时没有命令行窗口（适合GUI程序）
         # --onefile 打包成单个exe文件
-        # --icon=None 不使用图标，如需图标可替换为.ico文件路径
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
