@@ -178,7 +178,7 @@ class ImageAnalyzerApp:
         
         # 构造符合OpenAI格式的请求体（兼容中转API）
         payload = {
-            "model": "gemini-2.5-pro",  # 中转API支持的模型（根据实际支持的模型修改）
+            "model": "gemini-2.5-pro-thinking",  # 中转API支持的模型（根据实际支持的模型修改）
             "messages": [
                 {
                     "role": "user",
