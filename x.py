@@ -188,7 +188,7 @@ class ImageAnalyzerApp:
                     ]
                 }
             ],
-            "max_tokens": 300  # 限制回复长度
+            "max_tokens": 30000  # 限制回复长度
         }
     
         headers = {
