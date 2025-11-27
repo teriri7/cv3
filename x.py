@@ -10,19 +10,15 @@ import threading
 API_KEY = "sk-NVQd4Tw4UnoEzIqtiUbeXFsXCAQv8QmeMdGljaIq9s2NIpdf"  # 替换为你的中转API密钥
 API_BASE_URL = "https://newapi.pockgo.com/v1/chat/completions"  # 中转API地址（兼容OpenAI格式）
 
-# 默认prompt
-DEFAULT_PROMPT = """用户将上传图片，请根据每张图片中的客观内容和设计内容，对图片进行描述。
-图片详细描述，400到500词左右，尽可能描述画面具体客观内容和设计内容细节。
-注意：客观内容主要包括主体的长相、动作、位于画面的位置、朝向画面的角度、姿态、环境、风格体裁、主体年龄、人种、发型、身材、服装造型、五官特征、神情、情绪状态；设计内容主要包括画面构图、景别、观众视角、对焦点（景深）、色调、亮度、饱和度、光照角度、光质、画面风格、情绪、氛围、清晰程度。
-输出格式：自然语言描述，语言要流畅、有画面感，不要附加任何解释、说明、标签或非描述内容等冗余开场，仅输出自然语言。内容信息一定要准确。表达方式要有各种各样的、不是特别专业的表达方式，以口语话的方法描述画面内容，不要使用专业的词汇来描述画面，例如中景景别可以写为：露出腰部以上，景深可以写为：画面较为模糊，之类的这种话术，带入小白的视角来描述画面，直接输出一整段的文本，不需要进行分段。
-参考格式示例：这幅画面给人的第一印象是强烈的对比感和超现实主义的神秘氛围,它巧妙地结合了废墟的萧瑟与奇幻的瑰丽,整个画面的色彩设计是绝对的主导者,它采用了极端的冷暖色调搭配,主体外部环境几乎被一种深邃、压抑的蓝绿色或暗青色所统治,像是永恒的深夜或深海之中,几乎所有细节都沉浸在浓重的阴影里,这种冷色调奠定了压抑且孤寂的基调,然而,画面的核心焦点,那道巨大的古老门廊中央,却喷薄出极度饱和且梦幻的粉紫色光芒,这是核心的暖色调,这种戏剧性的色彩冲突瞬间吸引了所有目光,营造出强烈的视觉冲击。从纯画面情景来看,画面中央嘉立着一座体量巨大、古老且残破不堪的东方风格木质门楼,它的屋顶瓦片缺损严重,木结构也多处断裂,屋顶边缘参差不齐,暗示着它经历了一场巨大的灾难或漫长的时间侵蚀,它的残破感与周围环境的阴暗融为一体,突出了"废墟"的主题,门楼的两侧延伸出低矮的围墙和建筑残骸,这些墙体由粗糙的石砖或泥土砌成,表面有着明显的风化痕迹,进一步加深了画面的荒凉感,在门楼的前方和四周,散落着大量不规则形状的巨大乱石和建筑碎块,这些前景元素增强了画面的空间深度,并让观众感受到地面的崎岖不平,整个地面似乎有一层薄薄的积水,这层水面至关重要,它成为了天然的镜子,将门廊中喷涌出的粉紫色光芒清晰地反射出来,这种水面倒影的处理极大地提升了画面的光影质感和魔幻气息,让"内发光"的光源效果显得更加真实和强烈。再聚焦到门楼的核心区域两扇已经敞开的门板之间,展现的不是背后的景色,而是一片非物质化的、闪耀着光芒的"能量场"或"传送门",这片核心光源是极其复杂的的渐变色,从明亮的蓝紫色过渡到高饱和度的粉红色,仿佛是扭曲的星云或另一个维度空间的晚霞,其中能清晰地观察到无数微小的、闪烁的白色光点,它们像是漂浮的星辰,让这个"洞口"充满了无限的可能和奇幻魅力,这种超自然光源强劲有力,它将周围残破的木质门框、门楼的底部以及地面的积水都染上了一层荧光般的粉紫色溢光,形成了极佳的光影对比和环境光效果,从画面设计词的角度来看,画面的构图设计采用了中央对称的布局,将巨大的门楼置于画面中心,营造出宏大且庄重的仪式感,而两侧的废墟向外延伸,增强了画面的宽阔感和景深。最后,画面右侧中景的位置,是一个背对观众的女性身影,她是画面的主体人物和叙事焦点,她穿着一件浅色的短裤和一件深色但质地柔软的上衣,留着一头过肩长发,她正坚定地向前迈步,身体略微前倾,整个姿态都指向那道发光的门,显示出一种义无反顾的决绝和急切,她被放置在构图的右侧,平衡了门楼巨大的体量,她的存在赋予了整个场景强烈的叙事性和代入感,让"跨越"成为了画面的的核心主题,人物身上的光线处理也很精妙,她迎着门内的光,因此她身体的侧面和边缘都被染上了一层柔和的粉紫色轮廓光,进一步将她与周围冰冷的废墟环境区分开来,整体而言,这个画面在艺术风格上带有明显的日系动漫或奇幻插画的精致感,它通过冷暖色的极端对比、废墟与奇幻元素的融合、以及人物坚定的动作,共同讲述了一个关于冒险、未知和希望的磅礴故事,它成功地将"遗弃"和"重生"这两种截然不同的情绪融合在了一起。"""
-
 class ImageAnalyzerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("图片分析工具")
-        self.root.geometry("700x600")
+        self.root.geometry("800x700")
         self.root.resizable(True, True)
+        
+        # 默认模型名称
+        self.default_model = "gemini-2.5-pro-thinking"
         
         # 设置样式
         self.style = ttk.Style()
@@ -36,69 +32,113 @@ class ImageAnalyzerApp:
         self.root.option_add("*Font", "微软雅黑 10")
     
     def create_widgets(self):
-        # 主框架
-        main_frame = ttk.Frame(self.root, padding=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # 顶部框架
+        top_frame = ttk.Frame(self.root, padding=20)
+        top_frame.pack(fill=tk.X)
         
         # 标题
-        title_label = ttk.Label(main_frame, text="图片自动分析工具", font=("微软雅黑", 16, "bold"))
+        title_label = ttk.Label(top_frame, text="图片自动分析工具", font=("微软雅黑", 16, "bold"))
         title_label.pack(pady=10)
         
-        # Prompt区域框架
-        prompt_frame = ttk.LabelFrame(main_frame, text="分析提示词 (Prompt)", padding=10)
-        prompt_frame.pack(fill=tk.X, pady=10)
+        # 模型设置
+        model_frame = ttk.Frame(top_frame)
+        model_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Prompt文本框
-        self.prompt_text = scrolledtext.ScrolledText(
+        model_label = ttk.Label(model_frame, text="模型名称:")
+        model_label.pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.model_entry = ttk.Entry(model_frame, font=("微软雅黑", 10))
+        self.model_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.model_entry.insert(0, self.default_model)  # 设置默认模型
+        
+        # Prompt设置区域
+        prompt_frame = ttk.LabelFrame(self.root, text="Prompt设置", padding=10)
+        prompt_frame.pack(fill=tk.BOTH, expand=True, padx=20)
+        
+        # 短Prompt
+        short_prompt_label = ttk.Label(prompt_frame, text="短Prompt:")
+        short_prompt_label.pack(anchor=tk.W, pady=(0, 5))
+        
+        self.short_prompt_text = scrolledtext.ScrolledText(
+            prompt_frame, 
+            wrap=tk.WORD, 
+            height=4,
+            font=("微软雅黑", 9)
+        )
+        self.short_prompt_text.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # 设置短prompt默认内容
+        self.short_prompt_text.insert(tk.END, "用户将上传图片，请根据每张图片中的客观内容和设计内容，对图片进行描述。
+图片详细描述，200字以内，需要较为简洁但是又尽可能描述画面具体客观内容。
+一定要写的（客观内容部分，表达顺序不按下列固定）
+1、主体属性、人种（精准到国级、偶尔写人种）、性别、年龄（中年、16岁）
+3、主体角度、主体动作、角色间的动作关系
+4、构图、景别（如近景，中景，特写）、观众视角（俯瞰、低视角）
+5、环境信息
+6、风格体裁（写实有时可以默认不写，有时可以写，非写实风格一定要写）
+根据画面重点选择性写的（设计内容部分，控制下面内容输出的概率，保证下面的内容有50%左右的概率来写或者不写）
+1、情景概括
+2、具体长相（三角眼、高颧骨、方下巴）、身份或气质（性感、高冷、甜美、冷酷）、穿着、发型、角色情绪（忧郁、激动、平静）
+3、色调、色偏（如白平衡偏青、画面暗部偏红）、灰度或对比度（如log灰色调、中性灰色调、画面偏灰、强对比度）
+4、整体画面氛围（烘托出压抑的氛围）
+5、氛围、材质质感（如小牛皮纹理质感、胶片颗粒感、皮肤粗糙、雨水反光）
+6、特殊艺术处理方式（如浅景深、双重曝光、过曝、延时摄影、暗角等）
+输出格式：自然语言描述，语言要流畅、有画面感，不要附加任何解释、说明、标签或非描述内容等冗余开场，仅输出自然语言。内容信息一定要准确。表达方式要有各种各样的、不是特别专业的表达方式，以口语话的方法描述画面内容，不要使用专业的词汇来描述画面，例如中景景别可以写为：露出腰部以上，景深可以写为：画面较为模糊，之类的这种话术，带入小白的视角来描述画面，直接输出一整段的文本，不需要进行分段。
+参考格式示例1：重点是别墅上的灯光装饰，夜晚场景中，两层别墅外墙被蓝紫渐变灯光装饰，露台木质地面上，一位穿浅紫上衣的女人和穿深灰西装的男人并肩坐，手持玻璃杯交谈；左侧穿深蓝上衣的女人坐单人椅微笑倾听；右侧穿浅蓝上衣的男人坐躺椅看手机。露台旁泳池泛蓝光，周围绿植在暖光下更繁茂，房屋窗户透出暖黄灯光（描述画面内容，没有设计词）
+参考格式示例2：短发年轻女子穿着黄色T恤，挎着一个大黑包，手上端着一只白碗，跪伏在自动步道上，好像在观察着右边玻璃里的自己。（简单画面内容，情景概括）
+参考格式示例3：特写镜头，特写人物的表情，柜台后伙计约二十岁，站在柜台后，一手摸着后脑勺，表情困惑，身上裹着浅色粗布棉袄，阳光斜斜地照在柜台的桌面上。微微抬头向外张望，眉头微蹙，背景为民国时期的咸亨酒店，店内冷清，油画写实风格暗黑。高清画质，大师级作品。（基本的画面内容，简单的设计信息）
+参考格式示例4：空荡的公交站，路灯下雨水如断线珍珠。站台顶棚的边缘不断滴下水珠，形成雨帘。地面的积水倒映着路灯和人物的破碎倒影。低饱和度冷色调。主光源来自头顶的路灯，在人物身上形成顶光，照亮雨丝却让面部表情半明半暗，增强故事感。（描述画面，有设计词）")
+        
+        # 长Prompt
+        long_prompt_label = ttk.Label(prompt_frame, text="长Prompt:")
+        long_prompt_label.pack(anchor=tk.W, pady=(0, 5))
+        
+        self.long_prompt_text = scrolledtext.ScrolledText(
             prompt_frame, 
             wrap=tk.WORD, 
             height=6,
             font=("微软雅黑", 9)
         )
-        self.prompt_text.pack(fill=tk.X, expand=False)
-        self.prompt_text.insert("1.0", DEFAULT_PROMPT)
-        
-        # 按钮框架
-        button_frame = ttk.Frame(main_frame)
-        button_frame.pack(pady=20)
+        self.long_prompt_text.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # 设置长prompt默认内容
+        self.long_prompt_text.insert(tk.END, "用户将上传图片，请根据每张图片中的客观内容和设计内容，对图片进行描述。
+图片详细描述，250到400字以内，需要尽可能描述画面具体客观内容和设计内容。（包括以下部分）
+1、情景概括
+2、主体属性、人种（精准到国级、偶尔写人种）、性别、年龄（中年、16岁）
+3、具体长相（三角眼、高颧骨、方下巴）、身份或气质（性感、高冷、甜美、冷酷）、穿着、发型、角色情绪（忧郁、激动、平静）
+4、主体角度（朝向画面哪边）、主体位置（位于画面的哪个地方）、主体动作、角色间的动作关系
+5、构图、景别（如中景，近景，特写等）、观众视角（俯瞰、低视角等）
+6、环境信息
+7、风格体裁（写实有时可以默认不写，有时可以写，非写实风格一定要写）
+8、色调、色偏（如白平衡偏青、画面暗部偏红）、灰度或对比度（如log灰色调、中性灰色调、画面偏灰、强对比度）
+9、整体画面氛围（烘托出压抑的氛围）
+10、氛围、材质质感（如小牛皮纹理质感、胶片颗粒感、皮肤粗糙、雨水反光）
+11、特殊艺术处理方式（如浅景深、双重曝光、过曝、延时摄影、暗角等）
+输出格式：自然语言描述，语言要流畅、有画面感，不要附加任何解释、说明、标签或非描述内容等冗余开场，不要写有电影感的氛围，戏剧性的画面，像是电影的截图或者一帧，这些无意义的内容，仅输出自然语言。内容信息一定要准确。直接输出一整段的文本，不需要进行分段。
+参考格式示例1：画面中心位置上(构图）是一位中年（年龄）西方女性（人种和性别），卷曲的黑发扎成马尾（发型），带着银色耳环，身穿蓝色短袖制服带白色边饰，她侧身对镜头面向画面左侧（主体角度），站立在一扇大窗户旁，窗户悬挂着轻薄的白色窗帘。她两臂抬起，右手轻轻握住窗帘（主体动作），目光温柔地望向窗外，神情沉思。她后面靠近画面右侧的背景中有一个高大的深棕色木质书架，上面整齐摆放着各种颜色的书籍，书架旁还有一部分模糊的白色窗帘（环境信息），增添了室内温馨且富有文化气息的氛围。柔和的自然光透过窗户洒入室内，映照出她的侧脸，营造出宁静沉静的情绪。画面采用中心构图，中景，低角度轻微仰视拍摄，色调柔和（色调），突出平和而舒适的环境。
+参考格式示例2：一位年轻的亚洲男性（年龄、人种和性别）站在盛开的樱花树下。他留着棕色微卷短发，三七分刘海（发型），嘴角和下巴有黑色的胡茬，身着深色外套，内搭浅棕色T恤，外套敞开着。他身体侧向画面左侧，脸部正对镜头（主体角度），头部略微偏向画面右侧，眼眶湿润似乎蓄有泪水，眼神直视前方，目光清澈专注，嘴唇微抿，表情略带忧郁、沉思（角色情绪），似乎在思考着什么。背景是模糊的粉白色樱花和深色的树干（环境信息），沐浴在柔和的自然光中。中景（景别），平视视角（观众视角），偏重心构图，主体位于画面中心偏左(构图），浅景深，背景虚化以突出人物。光线柔和，面部有自然阴影，营造出宁静的春日氛围。画面色调整体偏柔和的暖色调（色调），给人一种静谧的感觉。
+参考格式示例3：画面左侧(构图）一只浅棕色毛发略显杂乱的狗（主体属性），戴着深棕色项圈，略微侧对镜头（主体角度）站立露出身体，黄色的眼睛平静地看画面右前方。一只带有关节的浅黄色木质纹理的金属机械手从上方轻轻抚摸着狗的耳朵（角色间动作关系）。狗身旁是有机械结构的腿部装置，颜色为黑灰色，带有金属部件，结构复杂且有磨损痕迹。光线从正面照射，背景是带有白色竖条纹的灰色地面和白色地面，地面有交错的光影，显示为室外环境（环境信息）。近景（景别），平视视角（观众视角），科幻风格，狗与机械腿部晰对焦，背景略微模糊，柔和的冷色调光线（色调），营造出一种略带末世感又充满温情的对比氛围。")
         
         # 开始按钮
         self.start_btn = ttk.Button(
-            button_frame, 
+            self.root, 
             text="开始识别", 
             command=self.start_analysis_thread,
             width=15
         )
-        self.start_btn.pack(side=tk.LEFT, padx=10)
+        self.start_btn.pack(pady=10)
         
-        # 重置Prompt按钮
-        self.reset_btn = ttk.Button(
-            button_frame, 
-            text="重置Prompt", 
-            command=self.reset_prompt,
-            width=15
-        )
-        self.reset_btn.pack(side=tk.LEFT, padx=10)
+        # 日志区域
+        log_frame = ttk.LabelFrame(self.root, text="处理日志", padding=10)
+        log_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
         
-        # 日志区域框架
-        log_frame = ttk.LabelFrame(main_frame, text="处理日志", padding=10)
-        log_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        
-        # 日志文本框
         self.log_text = scrolledtext.ScrolledText(
             log_frame, 
             wrap=tk.WORD, 
             height=10,
             font=("微软雅黑", 9)
         )
-        self.log_text.pack(fill=tk.BOTH, expand=True)
+        self.log_text.pack(fill=tk.BOTH, expand=True, pady=5)
         self.log_text.config(state=tk.DISABLED)
-    
-    def reset_prompt(self):
-        """重置Prompt为默认值"""
-        self.prompt_text.delete("1.0", tk.END)
-        self.prompt_text.insert("1.0", DEFAULT_PROMPT)
-        self.log("Prompt已重置为默认值")
     
     def log(self, message):
         """在日志区域显示消息"""
@@ -126,6 +166,22 @@ class ImageAnalyzerApp:
                 messagebox.showerror("错误", "请先在程序中填写你的API密钥")
                 return
             
+            # 获取用户输入的模型名称
+            model_name = self.model_entry.get().strip()
+            if not model_name:
+                self.log("模型名称不能为空")
+                messagebox.showerror("错误", "模型名称不能为空")
+                return
+            
+            # 获取用户输入的两个prompt
+            short_prompt = self.short_prompt_text.get("1.0", tk.END).strip()
+            long_prompt = self.long_prompt_text.get("1.0", tk.END).strip()
+            
+            if not short_prompt or not long_prompt:
+                self.log("短prompt和长prompt都不能为空")
+                messagebox.showerror("错误", "短prompt和长prompt都不能为空")
+                return
+            
             image_files = self.get_image_files()
             if not image_files:
                 self.log("当前文件夹中未找到任何图片文件")
@@ -133,32 +189,40 @@ class ImageAnalyzerApp:
                 return
             
             self.log(f"找到 {len(image_files)} 张图片，开始识别...")
-            
-            # 获取当前prompt
-            current_prompt = self.prompt_text.get("1.0", tk.END).strip()
-            if not current_prompt:
-                self.log("警告：Prompt为空，使用默认Prompt")
-                current_prompt = DEFAULT_PROMPT
+            self.log(f"使用模型: {model_name}")
             
             # 处理结果
             results = []
             results.append(f"图片识别结果 - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            results.append("=" * 50 + "\n")
+            results.append(f"使用模型: {model_name}\n")
+            results.append("=" * 80 + "\n")
             
             # 依次处理每张图片
             for i, image_file in enumerate(image_files, 1):
                 self.log(f"正在处理第 {i}/{len(image_files)} 张: {image_file}")
-                result = self.analyze_image(image_file, current_prompt)
                 
-                if result:
-                    results.append(f"【图片 {i}】{image_file}\n")
-                    results.append(f"{result}\n")
-                    results.append("-" * 50 + "\n")
-                    self.log(f"第 {i} 张图片识别完成")
+                # 先用短prompt分析
+                self.log(f"使用短prompt分析第 {i} 张图片...")
+                short_result = self.analyze_image(image_file, short_prompt, model_name)
+                
+                # 再用长prompt分析
+                self.log(f"使用长prompt分析第 {i} 张图片...")
+                long_result = self.analyze_image(image_file, long_prompt, model_name)
+                
+                # 保存结果
+                results.append(f"【图片 {i}】{image_file}\n")
+                if short_result:
+                    results.append(f"短prompt分析结果:\n{short_result}\n")
                 else:
-                    results.append(f"【图片 {i}】{image_file} - 识别失败\n")
-                    results.append("-" * 50 + "\n")
-                    self.log(f"第 {i} 张图片识别失败")
+                    results.append("短prompt分析失败\n")
+                    
+                if long_result:
+                    results.append(f"长prompt分析结果:\n{long_result}\n")
+                else:
+                    results.append("长prompt分析失败\n")
+                    
+                results.append("-" * 80 + "\n")
+                self.log(f"第 {i} 张图片分析完成")
             
             # 保存结果
             output_filename = f"image_analysis_results_{time.strftime('%Y%m%d_%H%M%S')}.txt"
@@ -180,8 +244,8 @@ class ImageAnalyzerApp:
             self.start_btn.config(state=tk.NORMAL)
     
     def get_image_files(self):
-        """获取当前文件夹下的所有图片文件"""
-        image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp')
+        """获取当前文件夹下的所有图片文件，包括jfif格式"""
+        image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.jfif')
         return [f for f in os.listdir('.') if f.lower().endswith(image_extensions)]
     
     def encode_image(self, image_path):
@@ -195,7 +259,7 @@ class ImageAnalyzerApp:
             return None
     
     def get_mime_type(self, image_path):
-        """根据文件后缀获取MIME类型"""
+        """根据文件后缀获取MIME类型，增加jfif类型"""
         ext = image_path.lower().split('.')[-1]
         mime_map = {
             'jpg': 'image/jpeg',
@@ -203,21 +267,21 @@ class ImageAnalyzerApp:
             'png': 'image/png',
             'gif': 'image/gif',
             'bmp': 'image/bmp',
-            'webp': 'image/webp'
+            'webp': 'image/webp',
+            'jfif': 'image/jpeg'  # jfif使用jpeg的MIME类型
         }
         return mime_map.get(ext, 'image/jpeg')
     
-    def analyze_image(self, image_path, prompt):
-        """通过中转API分析图片"""
+    def analyze_image(self, image_path, prompt, model_name):
+        """分析图片，接收prompt和model参数"""
         base64_image = self.encode_image(image_path)
         if not base64_image:
             return None
     
         mime_type = self.get_mime_type(image_path)
         
-        # 构造符合OpenAI格式的请求体（兼容中转API）
         payload = {
-            "model": "gemini-2.5-pro-thinking",  # 中转API支持的模型（根据实际支持的模型修改）
+            "model": model_name,  # 使用传入的模型名称
             "messages": [
                 {
                     "role": "user",
@@ -227,16 +291,16 @@ class ImageAnalyzerApp:
                     ]
                 }
             ],
-            "max_tokens": 30000  # 限制回复长度
+            "max_tokens": 30000  
         }
     
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {API_KEY}"  # 中转API的认证方式
+            "Authorization": f"Bearer {API_KEY}"  
         }
     
         try:
-            # 发送请求到中转API，超时时间改为120秒（仅修改此处）
+            # 发送请求到中转API
             response = requests.post(API_BASE_URL, json=payload, headers=headers, timeout=120)
             response.raise_for_status()  # 抛出HTTP错误状态码
             result = response.json()
