@@ -5,6 +5,7 @@ import requests
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 # 配置参数
 API_KEY = "sk-NVQd4Tw4UnoEzIqtiUbeXFsXCAQv8QmeMdGljaIq9s2NIpdf"  # 替换为你的中转API密钥
@@ -72,7 +73,7 @@ class ImageAnalyzerApp:
 一定要写的（客观内容部分，表达顺序不按下列固定）
 1、主体属性、人种（精准到国级、偶尔写人种）、性别、年龄（中年、16岁）
 3、主体角度、主体动作、角色间的动作关系
-4、构图、景别（如近景，中景，特写）、观众视角（俯瞰、低视角）
+4、构图、景别（如近景，中景，特写）、观众视角（俯瞰、低视角），（一定要写景别和视角）
 5、环境信息
 6、风格体裁（写实有时可以默认不写，有时可以写，非写实风格一定要写）
 根据画面重点选择性写的（设计内容部分，控制下面内容输出的概率，保证下面的内容有50%左右的概率来写或者不写）
@@ -101,7 +102,7 @@ class ImageAnalyzerApp:
         self.long_prompt_text.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         # 设置长prompt默认内容
         self.long_prompt_text.insert(tk.END, """用户将上传图片，请根据每张图片中的客观内容和设计内容，对图片进行描述。
-图片详细描述，250到400字以内，需要尽可能描述画面具体客观内容和设计内容。（包括以下部分）
+图片详细描述，250到350字以内，需要尽可能描述画面具体客观内容和设计内容。（包括以下部分）
 1、情景概括
 2、主体属性、人种（精准到国级、偶尔写人种）、性别、年龄（中年、16岁）
 3、具体长相（三角眼、高颧骨、方下巴）、身份或气质（性感、高冷、甜美、冷酷）、穿着、发型、角色情绪（忧郁、激动、平静）
@@ -113,19 +114,41 @@ class ImageAnalyzerApp:
 9、整体画面氛围（烘托出压抑的氛围）
 10、氛围、材质质感（如小牛皮纹理质感、胶片颗粒感、皮肤粗糙、雨水反光）
 11、特殊艺术处理方式（如浅景深、双重曝光、过曝、延时摄影、暗角等）
-输出格式：自然语言描述，语言要流畅、有画面感，不要附加任何解释、说明、标签或非描述内容等冗余开场，不要写有电影感的氛围，戏剧性的画面，像是电影的截图或者一帧，这些无意义的内容，仅输出自然语言。内容信息一定要准确。直接输出一整段的文本，不需要进行分段。
+输出格式：自然语言描述，语言要流畅、有画面感，不要附加任何解释、说明、标签或非描述内容等冗余开场，不要写有电影感的氛围，戏剧性的画面，像是电影的截图或者一帧，这些无意义的内容，仅输出自然语言。内容信息一定要准确。直接输出一整段的文本，不需要进行分段。（下方参考示例里的括号内容只是给你作为参考，输出结果里面不要带上）
 参考格式示例1：画面中心位置上(构图）是一位中年（年龄）西方女性（人种和性别），卷曲的黑发扎成马尾（发型），带着银色耳环，身穿蓝色短袖制服带白色边饰，她侧身对镜头面向画面左侧（主体角度），站立在一扇大窗户旁，窗户悬挂着轻薄的白色窗帘。她两臂抬起，右手轻轻握住窗帘（主体动作），目光温柔地望向窗外，神情沉思。她后面靠近画面右侧的背景中有一个高大的深棕色木质书架，上面整齐摆放着各种颜色的书籍，书架旁还有一部分模糊的白色窗帘（环境信息），增添了室内温馨且富有文化气息的氛围。柔和的自然光透过窗户洒入室内，映照出她的侧脸，营造出宁静沉静的情绪。画面采用中心构图，中景，低角度轻微仰视拍摄，色调柔和（色调），突出平和而舒适的环境。
 参考格式示例2：一位年轻的亚洲男性（年龄、人种和性别）站在盛开的樱花树下。他留着棕色微卷短发，三七分刘海（发型），嘴角和下巴有黑色的胡茬，身着深色外套，内搭浅棕色T恤，外套敞开着。他身体侧向画面左侧，脸部正对镜头（主体角度），头部略微偏向画面右侧，眼眶湿润似乎蓄有泪水，眼神直视前方，目光清澈专注，嘴唇微抿，表情略带忧郁、沉思（角色情绪），似乎在思考着什么。背景是模糊的粉白色樱花和深色的树干（环境信息），沐浴在柔和的自然光中。中景（景别），平视视角（观众视角），偏重心构图，主体位于画面中心偏左(构图），浅景深，背景虚化以突出人物。光线柔和，面部有自然阴影，营造出宁静的春日氛围。画面色调整体偏柔和的暖色调（色调），给人一种静谧的感觉。
 参考格式示例3：画面左侧(构图）一只浅棕色毛发略显杂乱的狗（主体属性），戴着深棕色项圈，略微侧对镜头（主体角度）站立露出身体，黄色的眼睛平静地看画面右前方。一只带有关节的浅黄色木质纹理的金属机械手从上方轻轻抚摸着狗的耳朵（角色间动作关系）。狗身旁是有机械结构的腿部装置，颜色为黑灰色，带有金属部件，结构复杂且有磨损痕迹。光线从正面照射，背景是带有白色竖条纹的灰色地面和白色地面，地面有交错的光影，显示为室外环境（环境信息）。近景（景别），平视视角（观众视角），科幻风格，狗与机械腿部晰对焦，背景略微模糊，柔和的冷色调光线（色调），营造出一种略带末世感又充满温情的对比氛围。""")
         
-        # 开始按钮
+        # 按钮区域
+        btn_frame = ttk.Frame(self.root)
+        btn_frame.pack(pady=10)
+        
+        # 开始按钮（同时处理）
         self.start_btn = ttk.Button(
-            self.root, 
-            text="开始识别", 
+            btn_frame, 
+            text="同时处理", 
             command=self.start_analysis_thread,
             width=15
         )
-        self.start_btn.pack(pady=10)
+        self.start_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 短prompt处理按钮
+        self.short_btn = ttk.Button(
+            btn_frame, 
+            text="仅短Prompt", 
+            command=self.start_short_analysis_thread,
+            width=15
+        )
+        self.short_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 长prompt处理按钮
+        self.long_btn = ttk.Button(
+            btn_frame, 
+            text="仅长Prompt", 
+            command=self.start_long_analysis_thread,
+            width=15
+        )
+        self.long_btn.pack(side=tk.LEFT, padx=5)
         
         # 日志区域
         log_frame = ttk.LabelFrame(self.root, text="处理日志", padding=10)
@@ -149,18 +172,48 @@ class ImageAnalyzerApp:
         self.root.update_idletasks()  # 刷新界面
     
     def start_analysis_thread(self):
-        """启动分析线程，避免界面卡顿"""
-        self.start_btn.config(state=tk.DISABLED)
-        self.log("开始处理图片...")
+        """启动同时分析线程"""
+        self._disable_all_buttons()
+        self.log("开始同时处理图片...")
         
-        # 在新线程中执行分析任务
         thread = threading.Thread(target=self.perform_analysis)
         thread.daemon = True
         thread.start()
     
+    def start_short_analysis_thread(self):
+        """启动短prompt分析线程"""
+        self._disable_all_buttons()
+        self.log("开始仅用短prompt处理图片...")
+        
+        thread = threading.Thread(target=self.perform_short_analysis)
+        thread.daemon = True
+        thread.start()
+    
+    def start_long_analysis_thread(self):
+        """启动长prompt分析线程"""
+        self._disable_all_buttons()
+        self.log("开始仅用长prompt处理图片...")
+        
+        thread = threading.Thread(target=self.perform_long_analysis)
+        thread.daemon = True
+        thread.start()
+    
+    def _disable_all_buttons(self):
+        """禁用所有按钮"""
+        self.start_btn.config(state=tk.DISABLED)
+        self.short_btn.config(state=tk.DISABLED)
+        self.long_btn.config(state=tk.DISABLED)
+    
+    def _enable_all_buttons(self):
+        """启用所有按钮"""
+        self.start_btn.config(state=tk.NORMAL)
+        self.short_btn.config(state=tk.NORMAL)
+        self.long_btn.config(state=tk.NORMAL)
+    
     def perform_analysis(self):
-        """执行图片分析"""
+        """同时执行长短prompt图片分析（并行处理）"""
         try:
+            # 验证API密钥
             if not API_KEY or API_KEY == "请在此处填写你的API密钥":
                 self.log("请先在程序中填写你的API密钥")
                 messagebox.showerror("错误", "请先在程序中填写你的API密钥")
@@ -188,44 +241,46 @@ class ImageAnalyzerApp:
                 messagebox.showinfo("提示", "当前文件夹中未找到任何图片文件")
                 return
             
-            self.log(f"找到 {len(image_files)} 张图片，开始识别...")
+            self.log(f"找到 {len(image_files)} 张图片，开始同时处理...")
             self.log(f"使用模型: {model_name}")
             
             # 处理结果
             results = []
-            results.append(f"图片识别结果 - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            results.append(f"图片识别结果（同时处理） - {timestamp}\n")
             results.append(f"使用模型: {model_name}\n")
             results.append("=" * 80 + "\n")
             
-            # 依次处理每张图片
-            for i, image_file in enumerate(image_files, 1):
-                self.log(f"正在处理第 {i}/{len(image_files)} 张: {image_file}")
-                
-                # 先用短prompt分析
-                self.log(f"使用短prompt分析第 {i} 张图片...")
-                short_result = self.analyze_image(image_file, short_prompt, model_name)
-                
-                # 再用长prompt分析
-                self.log(f"使用长prompt分析第 {i} 张图片...")
-                long_result = self.analyze_image(image_file, long_prompt, model_name)
-                
-                # 保存结果
-                results.append(f"【图片 {i}】{image_file}\n")
-                if short_result:
-                    results.append(f"短prompt分析结果:\n{short_result}\n")
-                else:
-                    results.append("短prompt分析失败\n")
+            # 依次处理每张图片，使用线程池并行处理长短prompt
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                for i, image_file in enumerate(image_files, 1):
+                    self.log(f"正在处理第 {i}/{len(image_files)} 张: {image_file}")
                     
-                if long_result:
-                    results.append(f"长prompt分析结果:\n{long_result}\n")
-                else:
-                    results.append("长prompt分析失败\n")
+                    # 并行执行长短prompt分析
+                    short_future = executor.submit(self.analyze_image, image_file, short_prompt, model_name)
+                    long_future = executor.submit(self.analyze_image, image_file, long_prompt, model_name)
                     
-                results.append("-" * 80 + "\n")
-                self.log(f"第 {i} 张图片分析完成")
+                    # 获取结果
+                    short_result = short_future.result()
+                    long_result = long_future.result()
+                    
+                    # 保存结果
+                    results.append(f"【图片 {i}】{image_file}\n")
+                    if short_result:
+                        results.append(f"短prompt分析结果:\n{short_result}\n")
+                    else:
+                        results.append("短prompt分析失败\n")
+                        
+                    if long_result:
+                        results.append(f"长prompt分析结果:\n{long_result}\n")
+                    else:
+                        results.append("长prompt分析失败\n")
+                        
+                    results.append("-" * 80 + "\n")
+                    self.log(f"第 {i} 张图片分析完成")
             
             # 保存结果
-            output_filename = f"image_analysis_results_{time.strftime('%Y%m%d_%H%M%S')}.txt"
+            output_filename = f"image_analysis_both_{time.strftime('%Y%m%d_%H%M%S')}.txt"
             try:
                 with open(output_filename, "w", encoding="utf-8") as f:
                     f.writelines(results)
@@ -241,7 +296,157 @@ class ImageAnalyzerApp:
             self.log(error_msg)
             messagebox.showerror("错误", error_msg)
         finally:
-            self.start_btn.config(state=tk.NORMAL)
+            self._enable_all_buttons()
+    
+    def perform_short_analysis(self):
+        """仅执行短prompt图片分析"""
+        try:
+            # 验证API密钥
+            if not API_KEY or API_KEY == "请在此处填写你的API密钥":
+                self.log("请先在程序中填写你的API密钥")
+                messagebox.showerror("错误", "请先在程序中填写你的API密钥")
+                return
+            
+            # 获取用户输入的模型名称
+            model_name = self.model_entry.get().strip()
+            if not model_name:
+                self.log("模型名称不能为空")
+                messagebox.showerror("错误", "模型名称不能为空")
+                return
+            
+            # 获取短prompt
+            short_prompt = self.short_prompt_text.get("1.0", tk.END).strip()
+            if not short_prompt:
+                self.log("短prompt不能为空")
+                messagebox.showerror("错误", "短prompt不能为空")
+                return
+            
+            image_files = self.get_image_files()
+            if not image_files:
+                self.log("当前文件夹中未找到任何图片文件")
+                messagebox.showinfo("提示", "当前文件夹中未找到任何图片文件")
+                return
+            
+            self.log(f"找到 {len(image_files)} 张图片，开始短prompt处理...")
+            self.log(f"使用模型: {model_name}")
+            
+            # 处理结果
+            results = []
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            results.append(f"图片识别结果（仅短prompt） - {timestamp}\n")
+            results.append(f"使用模型: {model_name}\n")
+            results.append("=" * 80 + "\n")
+            
+            # 依次处理每张图片
+            for i, image_file in enumerate(image_files, 1):
+                self.log(f"正在处理第 {i}/{len(image_files)} 张: {image_file}")
+                
+                # 用短prompt分析
+                short_result = self.analyze_image(image_file, short_prompt, model_name)
+                
+                # 保存结果
+                results.append(f"【图片 {i}】{image_file}\n")
+                if short_result:
+                    results.append(f"短prompt分析结果:\n{short_result}\n")
+                else:
+                    results.append("短prompt分析失败\n")
+                    
+                results.append("-" * 80 + "\n")
+                self.log(f"第 {i} 张图片分析完成")
+            
+            # 保存结果
+            output_filename = f"image_analysis_short_{time.strftime('%Y%m%d_%H%M%S')}.txt"
+            try:
+                with open(output_filename, "w", encoding="utf-8") as f:
+                    f.writelines(results)
+                self.log(f"所有图片处理完成，结果已保存至 {output_filename}")
+                messagebox.showinfo("完成", f"所有图片处理完成，结果已保存至 {output_filename}")
+            except Exception as e:
+                error_msg = f"保存结果失败: {e}"
+                self.log(error_msg)
+                messagebox.showerror("错误", error_msg)
+                
+        except Exception as e:
+            error_msg = f"处理过程中发生错误: {str(e)}"
+            self.log(error_msg)
+            messagebox.showerror("错误", error_msg)
+        finally:
+            self._enable_all_buttons()
+    
+    def perform_long_analysis(self):
+        """仅执行长prompt图片分析"""
+        try:
+            # 验证API密钥
+            if not API_KEY or API_KEY == "请在此处填写你的API密钥":
+                self.log("请先在程序中填写你的API密钥")
+                messagebox.showerror("错误", "请先在程序中填写你的API密钥")
+                return
+            
+            # 获取用户输入的模型名称
+            model_name = self.model_entry.get().strip()
+            if not model_name:
+                self.log("模型名称不能为空")
+                messagebox.showerror("错误", "模型名称不能为空")
+                return
+            
+            # 获取长prompt
+            long_prompt = self.long_prompt_text.get("1.0", tk.END).strip()
+            if not long_prompt:
+                self.log("长prompt不能为空")
+                messagebox.showerror("错误", "长prompt不能为空")
+                return
+            
+            image_files = self.get_image_files()
+            if not image_files:
+                self.log("当前文件夹中未找到任何图片文件")
+                messagebox.showinfo("提示", "当前文件夹中未找到任何图片文件")
+                return
+            
+            self.log(f"找到 {len(image_files)} 张图片，开始长prompt处理...")
+            self.log(f"使用模型: {model_name}")
+            
+            # 处理结果
+            results = []
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            results.append(f"图片识别结果（仅长prompt） - {timestamp}\n")
+            results.append(f"使用模型: {model_name}\n")
+            results.append("=" * 80 + "\n")
+            
+            # 依次处理每张图片
+            for i, image_file in enumerate(image_files, 1):
+                self.log(f"正在处理第 {i}/{len(image_files)} 张: {image_file}")
+                
+                # 用长prompt分析
+                long_result = self.analyze_image(image_file, long_prompt, model_name)
+                
+                # 保存结果
+                results.append(f"【图片 {i}】{image_file}\n")
+                if long_result:
+                    results.append(f"长prompt分析结果:\n{long_result}\n")
+                else:
+                    results.append("长prompt分析失败\n")
+                    
+                results.append("-" * 80 + "\n")
+                self.log(f"第 {i} 张图片分析完成")
+            
+            # 保存结果
+            output_filename = f"image_analysis_long_{time.strftime('%Y%m%d_%H%M%S')}.txt"
+            try:
+                with open(output_filename, "w", encoding="utf-8") as f:
+                    f.writelines(results)
+                self.log(f"所有图片处理完成，结果已保存至 {output_filename}")
+                messagebox.showinfo("完成", f"所有图片处理完成，结果已保存至 {output_filename}")
+            except Exception as e:
+                error_msg = f"保存结果失败: {e}"
+                self.log(error_msg)
+                messagebox.showerror("错误", error_msg)
+                
+        except Exception as e:
+            error_msg = f"处理过程中发生错误: {str(e)}"
+            self.log(error_msg)
+            messagebox.showerror("错误", error_msg)
+        finally:
+            self._enable_all_buttons()
     
     def get_image_files(self):
         """获取当前文件夹下的所有图片文件，包括jfif格式"""
