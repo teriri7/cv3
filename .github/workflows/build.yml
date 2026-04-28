@@ -2,45 +2,39 @@ name: Build EXE
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - '**.py'
-      - '.github/workflows/build.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - '**.py'
-      - '.github/workflows/build.yml'
-  workflow_dispatch:  # 允许手动触发
+    tags:
+      - 'v*'                # 当推送版本标签时触发（如 v1.0.0）
+  workflow_dispatch:        # 支持手动触发
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    
+  build:
+    runs-on: windows-latest  # 打包 Windows 可执行文件必须选择 windows 环境
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'  # 使用最新稳定版Python
-        cache: 'pip'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller requests
-        pip list  # 显示已安装的包，用于调试
-    
-    - name: Build with PyInstaller
-      run: |
-        pyinstaller --onefile --name "ImageAnalyzer" --windowed x.py
-        # 已移除--icon=None参数，默认不使用图标
-        # --windowed 确保运行时没有命令行窗口（适合GUI程序）
-        # --onefile 打包成单个exe文件
-    
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ImageAnalyzer-exe
-        path: dist/ImageAnalyzer.exe
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'   # 使用稳定版本
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pillow tkinterdnd2
+
+      - name: 使用 PyInstaller 打包
+        run: |
+          # 假设您的 Python 入口文件名是 hb.py，如果不是请修改
+          pyinstaller --onefile --windowed --name "合并图片" --add-data "C:\hostedtoolcache\windows\Python\3.11.9\x64\Lib\site-packages\tkinterdnd2;tkinterdnd2" hb.py
+        # 注意：tkinterdnd2 可能需要额外的数据文件。上面 --add-data 路径仅供参考，不同版本 Python 路径可能变化。
+        # 更通用的方法是使用 --collect-all tkinterdnd2，PyInstaller 会自动处理。
+        # 替代命令：
+        # pyinstaller --onefile --windowed --name "合并图片" --collect-all tkinterdnd2 hb.py
+
+      - name: 上传 EXE 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: 合并图片
+          path: dist/合并图片.exe
