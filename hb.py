@@ -76,6 +76,7 @@ class ImageMergerApp:
         modes = [
             ("🤖 自动 (智能布局)", "auto"),
             ("➡️ 横向合并", "horizontal"),
+            ("⬇️ 垂直合并", "vertical"),          # 新增
             ("🟫 网格合并 (2×n)", "grid2"),
             ("📊 网格合并 (3×n)", "grid3"),
             ("🗂️ 网格合并 (4×n)", "grid4")
@@ -166,6 +167,7 @@ class ImageMergerApp:
         mode_names = {
             "auto": "自动 (智能布局)",
             "horizontal": "横向合并",
+            "vertical": "垂直合并",
             "grid2": "网格合并 (2×n)",
             "grid3": "网格合并 (3×n)",
             "grid4": "网格合并 (4×n)"
@@ -229,6 +231,8 @@ class ImageMergerApp:
         
         if actual_mode == "horizontal":
             return self.merge_horizontal(images, file_paths, mode=actual_mode)
+        elif actual_mode == "vertical":
+            return self.merge_vertical(images, file_paths, mode=actual_mode)
         elif actual_mode == "grid2":
             return self.merge_grid(images, file_paths, columns=2, mode=actual_mode)
         elif actual_mode == "grid3":
@@ -275,6 +279,43 @@ class ImageMergerApp:
                     for y in range(target_height):
                         merged.putpixel((x_offset + w, y), line_color)
                 x_offset += sep_thick
+        return self.save_image(merged, file_paths[0], mode=mode)
+
+    def merge_vertical(self, images, file_paths, mode="vertical"):
+        """垂直合并：统一宽度，向下排列，相邻图片间添加水平分隔线"""
+        if not images:
+            raise ValueError("没有图片可合并")
+        # 统一宽度
+        target_width = max(img.width for img in images)
+        resized_images = []
+        for img in images:
+            ratio = target_width / img.width
+            new_height = int(img.height * ratio)
+            resized = img.resize((target_width, new_height), Image.Resampling.LANCZOS)
+            resized_images.append(resized)
+
+        total_height_no_sep = sum(img.height for img in resized_images)
+        max_side = max(target_width, total_height_no_sep)
+        sep_thick = max(1, int(max_side * 0.002))
+        total_height = total_height_no_sep + sep_thick * (len(resized_images) - 1)
+
+        bg_color = (255, 255, 255) if self.output_format.get() == "jpg" else (0, 0, 0, 0)
+        if self.output_format.get() == "png":
+            merged = Image.new('RGBA', (target_width, total_height), bg_color)
+        else:
+            merged = Image.new('RGB', (target_width, total_height), bg_color)
+
+        y_offset = 0
+        for i, img in enumerate(resized_images):
+            merged.paste(img, (0, y_offset))
+            y_offset += img.height
+            if i < len(resized_images) - 1:
+                line_color = (0, 0, 0, 255) if self.output_format.get() == "png" else (0, 0, 0)
+                # 绘制水平黑线
+                for h in range(sep_thick):
+                    for x in range(target_width):
+                        merged.putpixel((x, y_offset + h), line_color)
+                y_offset += sep_thick
         return self.save_image(merged, file_paths[0], mode=mode)
 
     def merge_grid(self, images, file_paths, columns, mode="grid"):
@@ -362,10 +403,11 @@ class ImageMergerApp:
         actual_mode = mode if mode is not None else self.merge_mode.get()
         mode_short = {
             "horizontal": "horiz",
+            "vertical": "vert",     # 垂直合并缩写
             "grid2": "grid2",
             "grid3": "grid3",
             "grid4": "grid4",
-            "auto": "auto"    # 实际不会用到，占位
+            "auto": "auto"          # 实际不会用到，占位
         }.get(actual_mode, "merged")
         fmt = self.output_format.get()
         filename = f"merged_{mode_short}_{timestamp}.{fmt}"
