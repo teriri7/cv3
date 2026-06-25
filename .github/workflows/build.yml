@@ -1,15 +1,15 @@
-name: Build epro EXE
+name: Build Image Merger EXE
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'epro.py'
+      - 'hb.py'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'epro.py'
+      - 'hb.py'
       - '.github/workflows/build.yml'
   workflow_dispatch:  # 允许手动触发
 
@@ -29,15 +29,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller Pillow requests pyautogui pywin32 pyperclip
+        pip install pyinstaller Pillow tkinterdnd2
         pip list  # 显示已安装包，便于调试
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --name "自动贴套图" --console --hidden-import win32clipboard --hidden-import win32con --hidden-import win32api epro.py
+        pyinstaller --onefile --name "图片合并工具" --windowed --hidden-import tkinterdnd2 hb.py
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: 自动贴套图-exe
-        path: dist/自动贴套图.exe
+        name: 图片合并工具-exe
+        path: dist/图片合并工具.exe
