@@ -76,7 +76,7 @@ class ImageMergerApp:
         modes = [
             ("🤖 自动 (智能布局)", "auto"),
             ("➡️ 横向合并", "horizontal"),
-            ("⬇️ 垂直合并", "vertical"),          # 新增
+            ("⬇️ 垂直合并", "vertical"),
             ("🟫 网格合并 (2×n)", "grid2"),
             ("📊 网格合并 (3×n)", "grid3"),
             ("🗂️ 网格合并 (4×n)", "grid4")
@@ -129,7 +129,7 @@ class ImageMergerApp:
         self.log_text.config(yscrollcommand=scrollbar.set)
         
         info_label = ttk.Label(main_container, 
-            text="✨ 合并后的图片保存在第一张图片所在文件夹，保持原始画质\n✨ 分隔线厚度 = 最终画布最长边 × 0.2% (网格中仅在有相邻图片处绘制，交叉处自动填充黑线)",
+            text="✨ 合并后的图片保存在第一张图片所在文件夹，保持原始画质\n✨ 分隔间距 = 最终画布最长边 × 0.2%，背景为深灰色(仅JPG)或透明(PNG)",
             font=('Segoe UI', 8), foreground='#7f8c8d')
         info_label.pack(pady=(8, 0))
 
@@ -254,35 +254,31 @@ class ImageMergerApp:
             resized = img.resize((new_width, target_height), Image.Resampling.LANCZOS)
             resized_images.append(resized)
         
-        # 初步计算总宽（无分隔线）
-        total_width_no_sep = sum(img.width for img in resized_images)
-        # 分隔线厚度 = 最长边 × 0.2%
-        max_side = max(total_width_no_sep, target_height)
-        sep_thick = max(1, int(max_side * 0.002))
+        # 计算总宽（无间距）
+        total_width_no_gap = sum(img.width for img in resized_images)
+        # 间距 = 最长边 × 0.2%
+        max_side = max(total_width_no_gap, target_height)
+        gap = max(1, int(max_side * 0.002))
         
-        total_width = total_width_no_sep + sep_thick * (len(resized_images) - 1)
+        # 最终画布宽度 = 图片总宽 + (图片数-1)*间距
+        total_width = total_width_no_gap + gap * (len(resized_images) - 1)
         
-        bg_color = (255, 255, 255) if self.output_format.get() == "jpg" else (0, 0, 0, 0)
-        if self.output_format.get() == "png":
-            merged = Image.new('RGBA', (total_width, target_height), bg_color)
-        else:
+        # 背景色：JPG深灰，PNG透明
+        if self.output_format.get() == "jpg":
+            bg_color = (40, 40, 40)      # 深灰色
             merged = Image.new('RGB', (total_width, target_height), bg_color)
+        else:
+            merged = Image.new('RGBA', (total_width, target_height), (0, 0, 0, 0))
         
+        # 放置图片，间隔为 gap
         x_offset = 0
-        for i, img in enumerate(resized_images):
+        for img in resized_images:
             merged.paste(img, (x_offset, 0))
-            x_offset += img.width
-            if i < len(resized_images) - 1:
-                line_color = (0, 0, 0, 255) if self.output_format.get() == "png" else (0, 0, 0)
-                # 绘制垂直黑线区域
-                for w in range(sep_thick):
-                    for y in range(target_height):
-                        merged.putpixel((x_offset + w, y), line_color)
-                x_offset += sep_thick
+            x_offset += img.width + gap
+        
         return self.save_image(merged, file_paths[0], mode=mode)
 
     def merge_vertical(self, images, file_paths, mode="vertical"):
-        """垂直合并：统一宽度，向下排列，相邻图片间添加水平分隔线"""
         if not images:
             raise ValueError("没有图片可合并")
         # 统一宽度
@@ -294,28 +290,22 @@ class ImageMergerApp:
             resized = img.resize((target_width, new_height), Image.Resampling.LANCZOS)
             resized_images.append(resized)
 
-        total_height_no_sep = sum(img.height for img in resized_images)
-        max_side = max(target_width, total_height_no_sep)
-        sep_thick = max(1, int(max_side * 0.002))
-        total_height = total_height_no_sep + sep_thick * (len(resized_images) - 1)
+        total_height_no_gap = sum(img.height for img in resized_images)
+        max_side = max(target_width, total_height_no_gap)
+        gap = max(1, int(max_side * 0.002))
+        total_height = total_height_no_gap + gap * (len(resized_images) - 1)
 
-        bg_color = (255, 255, 255) if self.output_format.get() == "jpg" else (0, 0, 0, 0)
-        if self.output_format.get() == "png":
-            merged = Image.new('RGBA', (target_width, total_height), bg_color)
-        else:
+        if self.output_format.get() == "jpg":
+            bg_color = (40, 40, 40)
             merged = Image.new('RGB', (target_width, total_height), bg_color)
+        else:
+            merged = Image.new('RGBA', (target_width, total_height), (0, 0, 0, 0))
 
         y_offset = 0
-        for i, img in enumerate(resized_images):
+        for img in resized_images:
             merged.paste(img, (0, y_offset))
-            y_offset += img.height
-            if i < len(resized_images) - 1:
-                line_color = (0, 0, 0, 255) if self.output_format.get() == "png" else (0, 0, 0)
-                # 绘制水平黑线
-                for h in range(sep_thick):
-                    for x in range(target_width):
-                        merged.putpixel((x, y_offset + h), line_color)
-                y_offset += sep_thick
+            y_offset += img.height + gap
+
         return self.save_image(merged, file_paths[0], mode=mode)
 
     def merge_grid(self, images, file_paths, columns, mode="grid"):
@@ -326,76 +316,49 @@ class ImageMergerApp:
         cell_w = max(img.width for img in images)
         cell_h = max(img.height for img in images)
         
-        # 初步画布尺寸（无分隔线）
-        canvas_w_no_sep = columns * cell_w
-        canvas_h_no_sep = rows * cell_h
-        max_side_no_sep = max(canvas_w_no_sep, canvas_h_no_sep)
-        sep_thick = max(1, int(max_side_no_sep * 0.002))
+        # 初步画布尺寸（无间距）
+        canvas_w_no_gap = columns * cell_w
+        canvas_h_no_gap = rows * cell_h
+        max_side_no_gap = max(canvas_w_no_gap, canvas_h_no_gap)
+        gap = max(1, int(max_side_no_gap * 0.002))
         
-        total_width = columns * cell_w + (columns - 1) * sep_thick
-        total_height = rows * cell_h + (rows - 1) * sep_thick
+        total_width = columns * cell_w + (columns - 1) * gap
+        total_height = rows * cell_h + (rows - 1) * gap
         
-        bg_color = (255, 255, 255) if self.output_format.get() == "jpg" else (0, 0, 0, 0)
-        if self.output_format.get() == "png":
-            merged = Image.new('RGBA', (total_width, total_height), bg_color)
-        else:
+        # 深灰色背景（JPG）或透明（PNG）
+        if self.output_format.get() == "jpg":
+            bg_color = (40, 40, 40)
             merged = Image.new('RGB', (total_width, total_height), bg_color)
+        else:
+            merged = Image.new('RGBA', (total_width, total_height), (0, 0, 0, 0))
         
-        # 存储每个单元格的图片对象（填充后）
-        placed_images = [[None] * columns for _ in range(rows)]
+        # 放置图片，间距由 gap 自然形成
         for idx, img in enumerate(images):
             row = idx // columns
             col = idx % columns
+            # 使用 ImageOps.pad 保持比例并填充到统一单元格
             padded = ImageOps.pad(img, (cell_w, cell_h),
-                                 color='white' if self.output_format.get() == "jpg" else (0, 0, 0, 0),
+                                 color='white' if self.output_format.get() == "jpg" else (0,0,0,0),
                                  method=Image.Resampling.LANCZOS)
-            placed_images[row][col] = padded
+            x = col * (cell_w + gap)
+            y = row * (cell_h + gap)
+            merged.paste(padded, (x, y))
         
-        # 放置图片
-        for row in range(rows):
-            for col in range(columns):
-                if placed_images[row][col] is not None:
-                    x = col * (cell_w + sep_thick)
-                    y = row * (cell_h + sep_thick)
-                    merged.paste(placed_images[row][col], (x, y))
-        
-        line_color = (0, 0, 0, 255) if self.output_format.get() == "png" else (0, 0, 0)
-        
-        # 1. 先绘制所有垂直分隔线（存在相邻图片时绘制）
-        for row in range(rows):
-            for col in range(columns - 1):
-                if placed_images[row][col] is not None or placed_images[row][col+1] is not None:
-                    line_x = (col + 1) * cell_w + col * sep_thick
-                    y_start = row * (cell_h + sep_thick)
-                    y_end = y_start + cell_h
-                    for w in range(sep_thick):
-                        for y in range(y_start, y_end):
-                            merged.putpixel((line_x + w, y), line_color)
-        
-        # 2. 绘制所有水平分隔线（存在相邻图片时绘制）
-        for row in range(rows - 1):
-            for col in range(columns):
-                if placed_images[row][col] is not None or placed_images[row+1][col] is not None:
-                    line_y = (row + 1) * cell_h + row * sep_thick
-                    x_start = col * (cell_w + sep_thick)
-                    x_end = x_start + cell_w
-                    for h in range(sep_thick):
-                        for x in range(x_start, x_end):
-                            merged.putpixel((x, line_y + h), line_color)
-        
-        # 3. 交叉点区域强制涂黑，确保完全覆盖
-        for col in range(columns - 1):
-            for row in range(rows - 1):
-                v_line_x = (col + 1) * cell_w + col * sep_thick
-                h_line_y = (row + 1) * cell_h + row * sep_thick
-                for dx in range(sep_thick):
-                    for dy in range(sep_thick):
-                        set_x = v_line_x + dx
-                        set_y = h_line_y + dy
-                        if 0 <= set_x < total_width and 0 <= set_y < total_height:
-                            merged.putpixel((set_x, set_y), line_color)
-        
+        # 不再绘制任何分隔线，空缺网格自动显示背景色
         return self.save_image(merged, file_paths[0], mode=mode)
+
+    def save_jpg_with_limit(self, img, filepath, max_size_mb=20):
+        """保存 JPG 并确保文件体积不超过 max_size_mb MB，逐步降低质量直到满足要求"""
+        max_bytes = max_size_mb * 1024 * 1024
+        quality = 95
+        while quality >= 10:
+            img.save(filepath, format='JPEG', quality=quality, optimize=True)
+            if os.path.getsize(filepath) < max_bytes:
+                break
+            quality -= 5
+        # 若极低质量仍超限，则保留最低质量版本
+        if quality < 10:
+            img.save(filepath, format='JPEG', quality=10, optimize=True)
 
     def save_image(self, image, reference_path, mode=None):
         output_dir = os.path.dirname(reference_path)
@@ -403,11 +366,11 @@ class ImageMergerApp:
         actual_mode = mode if mode is not None else self.merge_mode.get()
         mode_short = {
             "horizontal": "horiz",
-            "vertical": "vert",     # 垂直合并缩写
+            "vertical": "vert",
             "grid2": "grid2",
             "grid3": "grid3",
             "grid4": "grid4",
-            "auto": "auto"          # 实际不会用到，占位
+            "auto": "auto"
         }.get(actual_mode, "merged")
         fmt = self.output_format.get()
         filename = f"merged_{mode_short}_{timestamp}.{fmt}"
@@ -415,7 +378,7 @@ class ImageMergerApp:
         if fmt == "jpg":
             if image.mode != "RGB":
                 image = image.convert("RGB")
-            image.save(filepath, quality=100, subsampling=0, optimize=False)
+            self.save_jpg_with_limit(image, filepath, max_size_mb=20)
         else:
             if image.mode != "RGBA":
                 image = image.convert("RGBA")
