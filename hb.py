@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+"""
+图片合并工具 — 粉白主题 · Win11 现代风格
+"""
+
 import tkinter as tk
-from tkinter import ttk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 from PIL import Image, ImageOps
 import os
@@ -8,383 +11,651 @@ from datetime import datetime
 import math
 import re
 
+# ═══════════════════════════════════════════════════════════════
+#  THEME
+# ═══════════════════════════════════════════════════════════════
+C = {
+    'bg':           '#FFF0F3',
+    'card':         '#FFFFFF',
+    'accent':       '#FF6B9D',
+    'accent_dark':  '#E85585',
+    'accent_light': '#FFE8EF',
+    'text':         '#2D2D3F',
+    'text_muted':   '#A0A0B2',
+    'border':       '#F0DDE3',
+    'input_bg':     '#FDF5F7',
+    'input_border': '#E8D5DC',
+    'toggle_off':   '#F3EDF0',
+    'drop_bg':      '#FFFAFB',
+    'drop_border':  '#FFD6E4',
+    'drop_hover':   '#FFE0EB',
+    'log_bg':       '#FFFAFB',
+}
+
+FT   = ('Segoe UI', 15, 'bold')
+FS   = ('Segoe UI', 10, 'bold')
+FB   = ('Segoe UI', 10)
+FB_B = ('Segoe UI', 10, 'bold')
+FXS  = ('Segoe UI', 8)
+FM   = ('Cascadia Code', 9)
+
+GAP_RGB = (40, 40, 40)
+
+
+# ═══════════════════════════════════════════════════════════════
+#  ROUNDED RECTANGLE HELPER
+# ═══════════════════════════════════════════════════════════════
+def _rr(c, x1, y1, x2, y2, r, **kw):
+    c.create_polygon(
+        x1 + r, y1,     x2 - r, y1,
+        x2,     y1,     x2,     y1 + r,
+        x2,     y2 - r, x2,     y2,
+        x2 - r, y2,     x1 + r, y2,
+        x1,     y2,     x1,     y2 - r,
+        x1,     y1 + r, x1,     y1,
+        smooth=True, **kw)
+
+
+# ═══════════════════════════════════════════════════════════════
+#  WIDGETS
+# ═══════════════════════════════════════════════════════════════
+
+class ToggleBtn(tk.Label):
+    """排序 / 输出格式的分段选择按钮"""
+    def __init__(self, parent, text, variable, value, **kw):
+        super().__init__(parent, text=text, font=FB, padx=12, pady=4,
+                         cursor='hand2', bg=C['toggle_off'],
+                         fg=C['text'], **kw)
+        self.var, self.val = variable, value
+        self.var.trace_add('write', lambda *_: self._sync())
+        self.bind('<Button-1>', lambda e: self.var.set(self.val))
+        self.bind('<Enter>', self._enter)
+        self.bind('<Leave>', lambda e: self._sync())
+        self._sync()
+
+    def _sync(self):
+        if self.var.get() == self.val:
+            self.configure(bg=C['accent'], fg='#FFFFFF')
+        else:
+            self.configure(bg=C['toggle_off'], fg=C['text'])
+
+    def _enter(self, _):
+        if self.var.get() != self.val:
+            self.configure(bg=C['accent_light'])
+
+
+class AutoToggleBtn(tk.Label):
+    """智能布局按钮 — cols=0 且 rows=0 时激活"""
+    def __init__(self, parent, text, cols_var, rows_var, **kw):
+        super().__init__(parent, text=text, font=FB, padx=12, pady=4,
+                         cursor='hand2', bg=C['toggle_off'],
+                         fg=C['text'], **kw)
+        self.cv = cols_var
+        self.rv = rows_var
+        self.cv.trace_add('write', lambda *_: self._sync())
+        self.rv.trace_add('write', lambda *_: self._sync())
+        self.bind('<Button-1>', self._click)
+        self.bind('<Enter>', self._enter)
+        self.bind('<Leave>', lambda e: self._sync())
+        self._sync()
+
+    def _click(self, _):
+        self.cv.set(0)
+        self.rv.set(0)
+
+    def _active(self):
+        return self.cv.get() == 0 and self.rv.get() == 0
+
+    def _sync(self):
+        a = self._active()
+        self.configure(bg=C['accent'] if a else C['toggle_off'],
+                       fg='#FFFFFF' if a else C['text'])
+
+    def _enter(self, _):
+        if not self._active():
+            self.configure(bg=C['accent_light'])
+
+
+class GridNumBtn(tk.Label):
+    """网格数量按钮 1-10"""
+    def __init__(self, parent, number, cols_var, rows_var, group, **kw):
+        super().__init__(parent, text=str(number), font=FB_B, width=3,
+                         bg=C['input_bg'], fg=C['text'],
+                         cursor='hand2', **kw)
+        self.num = number
+        self.cv  = cols_var
+        self.rv  = rows_var
+        self.grp = group
+        self.cv.trace_add('write', lambda *_: self._sync())
+        self.rv.trace_add('write', lambda *_: self._sync())
+        self.bind('<Button-1>', self._click)
+        self.bind('<Enter>', self._enter)
+        self.bind('<Leave>', lambda e: self._sync())
+        self._sync()
+
+    def _click(self, _):
+        if self.grp == 'col':
+            if self.cv.get() == self.num:
+                self.cv.set(0)
+            else:
+                self.cv.set(self.num)
+                self.rv.set(0)
+        else:
+            if self.rv.get() == self.num:
+                self.rv.set(0)
+            else:
+                self.rv.set(self.num)
+                self.cv.set(0)
+
+    def _active(self):
+        v = self.cv if self.grp == 'col' else self.rv
+        return v.get() == self.num
+
+    def _sync(self):
+        a = self._active()
+        self.configure(bg=C['accent'] if a else C['input_bg'],
+                       fg='#FFFFFF' if a else C['text'])
+
+    def _enter(self, _):
+        if not self._active():
+            self.configure(bg=C['accent_light'])
+
+
+# ═══════════════════════════════════════════════════════════════
+#  APPLICATION
+# ═══════════════════════════════════════════════════════════════
+
 class ImageMergerApp:
+
     def __init__(self, root):
         self.root = root
         self.root.title("图片合并工具")
-        self.root.geometry("910x670")
-        self.root.configure(bg='#f4f7fb')
-        self.root.resizable(True, True)
-        
-        # 设置应用样式
-        self.setup_styles()
-        
-        # 支持的图片格式
+        self.root.geometry("960x720")
+        self.root.minsize(900, 660)
+        self.root.configure(bg=C['bg'])
+
         self.supported_formats = ('.jpg', '.jpeg', '.png', '.webp', '.bmp')
         self.max_images = 100
-        
-        # 状态变量 —— 默认改为自动
-        self.merge_mode = tk.StringVar(value="auto")
-        self.output_format = tk.StringVar(value="jpg")
-        self.sort_by_time = tk.BooleanVar(value=True)
-        
-        # 创建界面
-        self.create_widgets()
-        self.setup_drag_highlight()
 
-    def setup_styles(self):
-        style = ttk.Style()
-        style.theme_use('clam')
-        self.root.configure(bg='#f4f7fb')
-        style.configure('TFrame', background='#f4f7fb')
-        style.configure('TLabelframe', background='#f4f7fb', foreground='#2c3e50', font=('Segoe UI', 10))
-        style.configure('TLabelframe.Label', background='#f4f7fb', foreground='#2c3e50', font=('Segoe UI', 10, 'bold'))
-        style.configure('Header.TLabel', background='#5a9bd5', foreground='white', 
-                       font=('Segoe UI', 13, 'bold'), padding=10)
-        style.configure('Accent.TButton', background='#5a9bd5', foreground='white', 
-                       font=('Segoe UI', 10), padding=5)
-        style.map('Accent.TButton',
-                 background=[('active', '#4a8bc5'), ('pressed', '#3a7bb5')])
-        style.configure('TRadiobutton', background='#f4f7fb', font=('Segoe UI', 10), foreground='#2c3e50')
-        style.configure('TLabel', background='#f4f7fb', foreground='#2c3e50', font=('Segoe UI', 9))
-        style.configure('Log.TFrame', relief='solid', borderwidth=1, background='#ffffff')
-        
-    def create_widgets(self):
-        main_container = ttk.Frame(self.root)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=15)
-        
-        header = ttk.Label(main_container, text="🖼️ 图片合并工具", style='Header.TLabel')
-        header.pack(fill=tk.X, pady=(0, 15), ipady=8)
-        
-        control_card = ttk.Frame(main_container, relief='flat')
-        control_card.pack(fill=tk.X, pady=5)
-        
-        # 排序方式
-        sort_frame = ttk.LabelFrame(control_card, text="排序方式", padding=8)
-        sort_frame.pack(fill=tk.X, pady=5)
-        ttk.Radiobutton(sort_frame, text="📅 按修改时间 (精确到毫秒)", 
-                       variable=self.sort_by_time, value=True).pack(side=tk.LEFT, padx=10)
-        ttk.Radiobutton(sort_frame, text="🔤 按文件名 (数字/字母顺序)", 
-                       variable=self.sort_by_time, value=False).pack(side=tk.LEFT, padx=10)
-        
-        # 合并模式与输出格式
-        settings_frame = ttk.Frame(control_card)
-        settings_frame.pack(fill=tk.X, pady=8)
-        
-        mode_frame = ttk.LabelFrame(settings_frame, text="合并模式", padding=8)
-        mode_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-        modes = [
-            ("🤖 自动 (智能布局)", "auto"),
-            ("➡️ 横向合并", "horizontal"),
-            ("⬇️ 垂直合并", "vertical"),
-            ("🟫 网格合并 (2×n)", "grid2"),
-            ("📊 网格合并 (3×n)", "grid3"),
-            ("🗂️ 网格合并 (4×n)", "grid4")
-        ]
-        for text, value in modes:
-            ttk.Radiobutton(mode_frame, text=text, variable=self.merge_mode, 
-                           value=value).pack(side=tk.LEFT, padx=3)
-        
-        format_frame = ttk.LabelFrame(settings_frame, text="输出格式", padding=8)
-        format_frame.pack(side=tk.RIGHT, fill=tk.X)
-        ttk.Radiobutton(format_frame, text="JPG (高质量)", variable=self.output_format, 
-                       value="jpg").pack(side=tk.LEFT, padx=8)
-        ttk.Radiobutton(format_frame, text="PNG (无损)", variable=self.output_format, 
-                       value="png").pack(side=tk.LEFT, padx=8)
-        
-        # 拖放区域
-        drop_frame = ttk.Frame(main_container)
-        drop_frame.pack(fill=tk.BOTH, expand=True, pady=12)
-        self.drop_label = tk.Label(
-            drop_frame,
-            text="📂 拖放图片或文件夹至此\n(支持格式: JPG, PNG, WEBP, BMP)",
-            relief="groove",
-            bg='#ffffff',
-            fg='#7f8c8d',
-            font=('Segoe UI', 11),
-            bd=2,
-            highlightthickness=0
-        )
-        self.drop_label.pack(fill=tk.BOTH, expand=True, ipady=30)
-        self.drop_label.drop_target_register(DND_FILES)
-        self.drop_label.dnd_bind('<<Drop>>', self.handle_drop)
-        
-        # 日志区域
-        log_container = ttk.LabelFrame(main_container, text="操作日志", padding=5)
-        log_container.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
-        self.log_text = tk.Text(
-            log_container,
-            height=8,
-            state='disabled',
-            bg='#ffffff',
-            fg='#2c3e50',
-            font=('Consolas', 9),
-            wrap=tk.WORD,
-            relief='flat',
-            borderwidth=0
-        )
-        self.log_text.pack(fill=tk.BOTH, expand=True)
-        scrollbar = ttk.Scrollbar(log_container, command=self.log_text.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.log_text.config(yscrollcommand=scrollbar.set)
-        
-        info_label = ttk.Label(main_container, 
-            text="✨ 合并后的图片保存在第一张图片所在文件夹，保持原始画质\n✨ 分隔间距 = 最终画布最长边 × 0.2%，背景为深灰色(仅JPG)或透明(PNG)",
-            font=('Segoe UI', 8), foreground='#7f8c8d')
-        info_label.pack(pady=(8, 0))
+        self.output_format = tk.StringVar(value='jpg')
+        self.sort_by_time  = tk.BooleanVar(value=True)
+        self.grid_cols     = tk.IntVar(value=0)
+        self.grid_rows     = tk.IntVar(value=0)
 
-    def setup_drag_highlight(self):
-        def on_enter(e):
-            self.drop_label.config(bg='#eef4fc', fg='#5a9bd5')
-        def on_leave(e):
-            self.drop_label.config(bg='#ffffff', fg='#7f8c8d')
-        self.drop_label.bind("<Enter>", on_enter)
-        self.drop_label.bind("<Leave>", on_leave)
+        self._build_ui()
 
+    # ══════════════════════════════════════════════════════════
+    #  UI CONSTRUCTION
+    # ══════════════════════════════════════════════════════════
+    def _build_ui(self):
+        main = tk.Frame(self.root, bg=C['bg'])
+        main.pack(fill='both', expand=True, padx=16, pady=12)
+
+        self._hdr = tk.Canvas(main, bg=C['bg'], height=48,
+                              highlightthickness=0)
+        self._hdr.pack(fill='x', pady=(0, 10))
+        self._hdr.bind('<Configure>',
+                       lambda e: self._paint_hdr(e.width, e.height))
+
+        self._build_card(main)
+        self._build_drop(main)
+        self._build_log(main)
+
+        tk.Label(main,
+                 text="✨ 合并后保存在第一张图片所在文件夹   "
+                      "✨ 分隔间距 = 最终画布最长边 × 0.2%   "
+                      "✨ JPG 背景深灰 / PNG 背景透明",
+                 font=FXS, fg=C['text_muted'], bg=C['bg']
+                 ).pack(anchor='w', pady=(4, 0))
+
+    def _paint_hdr(self, w, h):
+        c = self._hdr
+        c.delete('all')
+        _rr(c, 2, 2, w - 2, h - 2, 14, fill=C['accent'], outline='')
+        c.create_text(w // 2, h // 2,
+                      text="🌸  图片合并工具", fill='#FFFFFF', font=FT)
+
+    def _build_card(self, parent):
+        outer = tk.Frame(parent, bg=C['bg'])
+        outer.pack(fill='x', pady=(0, 6))
+        card = tk.Frame(outer, bg=C['card'], highlightthickness=1,
+                        highlightbackground=C['border'])
+        card.pack(fill='x', padx=4, pady=4)
+        inner = tk.Frame(card, bg=C['card'])
+        inner.pack(fill='x', padx=14, pady=10)
+
+        # ── Row 1: 排序方式 + 输出格式 ──
+        r1 = tk.Frame(inner, bg=C['card'])
+        r1.pack(fill='x', pady=(0, 6))
+        tk.Label(r1, text="排序方式", font=FS, fg=C['text'],
+                 bg=C['card']).pack(side='left')
+        ToggleBtn(r1, "📅 按修改时间",
+                  self.sort_by_time, True).pack(side='left', padx=(8, 2))
+        ToggleBtn(r1, "🔤 按文件名",
+                  self.sort_by_time, False).pack(side='left', padx=2)
+        tk.Frame(r1, bg=C['card'], width=28).pack(side='left')
+        tk.Label(r1, text="输出格式", font=FS, fg=C['text'],
+                 bg=C['card']).pack(side='left')
+        ToggleBtn(r1, "JPG (压缩至20m)",
+                  self.output_format, 'jpg').pack(side='left', padx=(8, 2))
+        ToggleBtn(r1, "PNG (无损)",
+                  self.output_format, 'png').pack(side='left', padx=2)
+
+        tk.Frame(inner, bg=C['border'], height=1).pack(fill='x', pady=6)
+
+        # ── Row 2: 合并模式 + 智能布局 ──
+        r2 = tk.Frame(inner, bg=C['card'])
+        r2.pack(fill='x', pady=(0, 6))
+        tk.Label(r2, text="合并模式", font=FS, fg=C['text'],
+                 bg=C['card']).pack(side='left')
+        AutoToggleBtn(r2, "🤖 智能布局",
+                      self.grid_cols, self.grid_rows
+                      ).pack(side='left', padx=(8, 0))
+
+        # ── Row 3: 横向多少张图片 ──
+        r3 = tk.Frame(inner, bg=C['card'])
+        r3.pack(fill='x', pady=(4, 2))
+        tk.Label(r3, text="横向多少张图片", font=FS, fg=C['text'],
+                 bg=C['card']).pack(side='left')
+        for i in range(1, 11):
+            GridNumBtn(r3, i, self.grid_cols, self.grid_rows, 'col'
+                       ).pack(side='left', padx=2, pady=2)
+
+        # ── Row 4: 竖向多少张图片 ──
+        r4 = tk.Frame(inner, bg=C['card'])
+        r4.pack(fill='x', pady=(2, 4))
+        tk.Label(r4, text="竖向多少张图片", font=FS, fg=C['text'],
+                 bg=C['card']).pack(side='left')
+        for i in range(1, 11):
+            GridNumBtn(r4, i, self.grid_cols, self.grid_rows, 'row'
+                       ).pack(side='left', padx=2, pady=2)
+
+    # ── drop zone ─────────────────────────────────────────────
+    def _build_drop(self, parent):
+        frame = tk.Frame(parent, bg=C['bg'])
+        frame.pack(fill='both', expand=True, pady=(0, 6))
+        self.drop_cv = tk.Canvas(frame, bg=C['bg'], highlightthickness=0)
+        self.drop_cv.pack(fill='both', expand=True)
+        self.drop_cv.bind('<Configure>',
+                          lambda e: self._paint_drop(e.width, e.height))
+        self.drop_cv.drop_target_register(DND_FILES)
+        self.drop_cv.dnd_bind('<<Drop>>', self.handle_drop)
+        self.drop_cv.bind('<Enter>', lambda e: self._drop_hov_set(True))
+        self.drop_cv.bind('<Leave>', lambda e: self._drop_hov_set(False))
+        self._drop_hov = False
+
+    def _paint_drop(self, w, h):
+        c = self.drop_cv
+        c.delete('all')
+        fill = C['drop_hover'] if self._drop_hov else C['drop_bg']
+        bdr  = C['accent']    if self._drop_hov else C['drop_border']
+        _rr(c, 3, 3, w - 3, h - 3, 18,
+            fill=fill, outline=bdr, width=2, dash=(10, 5))
+        fs = min(12, max(9, h // 18))
+        c.create_text(w // 2, h // 2 - fs,
+                      text="📂  拖放图片或文件夹至此",
+                      fill=C['text'] if self._drop_hov else C['text_muted'],
+                      font=('Segoe UI', fs))
+        c.create_text(w // 2, h // 2 + fs + 2,
+                      text="支持格式: JPG · PNG · WEBP · BMP",
+                      fill=C['text_muted'],
+                      font=('Segoe UI', max(8, fs - 2)))
+
+    def _drop_hov_set(self, entering):
+        self._drop_hov = entering
+        self._paint_drop(self.drop_cv.winfo_width(),
+                         self.drop_cv.winfo_height())
+
+    # ── log ───────────────────────────────────────────────────
+    def _build_log(self, parent):
+        outer = tk.Frame(parent, bg=C['bg'])
+        outer.pack(fill='both', expand=True, pady=(0, 4))
+        card = tk.Frame(outer, bg=C['card'], highlightthickness=1,
+                        highlightbackground=C['border'])
+        card.pack(fill='both', expand=True, padx=4, pady=4)
+        tk.Label(card, text="操作日志", font=FS, fg=C['text'],
+                 bg=C['card']).pack(anchor='w', padx=12, pady=(8, 2))
+        lf = tk.Frame(card, bg=C['log_bg'])
+        lf.pack(fill='both', expand=True, padx=10, pady=(0, 8))
+        self.log_text = tk.Text(lf, height=5, state='disabled',
+                                bg=C['log_bg'], fg=C['text'], font=FM,
+                                wrap='word', relief='flat', bd=0,
+                                selectbackground=C['accent_light'],
+                                selectforeground=C['text'],
+                                insertbackground=C['accent'])
+        self.log_text.pack(side='left', fill='both', expand=True)
+        sb = tk.Scrollbar(lf, command=self.log_text.yview,
+                          bg=C['bg'], troughcolor=C['log_bg'],
+                          relief='flat', bd=0)
+        sb.pack(side='right', fill='y')
+        self.log_text.config(yscrollcommand=sb.set)
+
+    # ══════════════════════════════════════════════════════════
+    #  LOG HELPER
+    # ══════════════════════════════════════════════════════════
     def log_message(self, message, level="INFO"):
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        prefix = "✅" if "成功" in message else "⚠️" if "忽略" in message or "警告" in message else "📌"
+        ts = datetime.now().strftime("%H:%M:%S")
+        pfx = ("✅" if "成功" in message
+               else "⚠️" if "忽略" in message or "警告" in message
+               else "📌")
         self.log_text.config(state='normal')
-        self.log_text.insert(tk.END, f"[{timestamp}] {prefix} {message}\n")
-        self.log_text.see(tk.END)
+        self.log_text.insert('end', f"[{ts}] {pfx} {message}\n")
+        self.log_text.see('end')
         self.log_text.config(state='disabled')
 
+    # ══════════════════════════════════════════════════════════
+    #  DRAG & DROP
+    # ══════════════════════════════════════════════════════════
     def handle_drop(self, event):
         files = self.root.tk.splitlist(event.data)
-        valid_files = []
+        valid = []
         for f in files:
             if os.path.splitext(f)[1].lower() in self.supported_formats:
-                valid_files.append(f)
+                valid.append(f)
             else:
                 self.log_message(f"忽略不支持的文件: {os.path.basename(f)}")
-        if len(valid_files) < 1:
+        if not valid:
             self.log_message("至少需要 1 张有效图片")
             return
-        valid_files = self.sort_files(valid_files)
-        if len(valid_files) > self.max_images:
-            self.log_message(f"图片数量超过上限 {self.max_images}，仅处理前 {self.max_images} 张")
-            valid_files = valid_files[:self.max_images]
-        mode_names = {
-            "auto": "自动 (智能布局)",
-            "horizontal": "横向合并",
-            "vertical": "垂直合并",
-            "grid2": "网格合并 (2×n)",
-            "grid3": "网格合并 (3×n)",
-            "grid4": "网格合并 (4×n)"
-        }
-        sort_desc = "按修改时间(升序)" if self.sort_by_time.get() else "按文件名排序"
-        self.log_message(f"开始处理 {len(valid_files)} 张图片 | 排序: {sort_desc}")
-        self.log_message(f"合并模式: {mode_names[self.merge_mode.get()]}")
-        self.log_message(f"输出格式: {self.output_format.get().upper()}")
-        try:
-            output_path = self.merge_images(valid_files)
-            self.log_message(f"合并成功！文件保存至: {output_path}")
-        except Exception as e:
-            self.log_message(f"处理出错: {str(e)}", level="ERROR")
+        valid = self.sort_files(valid)
+        if len(valid) > self.max_images:
+            self.log_message(
+                f"超过上限 {self.max_images} 张，仅处理前 {self.max_images} 张")
+            valid = valid[:self.max_images]
 
-    def sort_files(self, file_paths):
-        if self.sort_by_time.get():
-            file_paths.sort(key=lambda x: os.path.getmtime(x))
-            return file_paths
+        gc, gr = self.grid_cols.get(), self.grid_rows.get()
+        sd = "按修改时间(升序)" if self.sort_by_time.get() else "按文件名"
+        if gc > 0:
+            md = f"横向 {gc} 张"
+        elif gr > 0:
+            md = f"竖向 {gr} 张"
         else:
-            if self.all_files_numeric(file_paths):
-                file_paths.sort(key=lambda x: self.extract_number(os.path.basename(x)))
+            md = "智能布局"
+
+        self.log_message(f"处理 {len(valid)} 张图片 | 排序: {sd}")
+        self.log_message(
+            f"模式: {md} | 格式: {self.output_format.get().upper()}")
+        try:
+            path = self.merge_images(valid)
+            self.log_message(f"合并成功！保存至: {path}")
+        except Exception as e:
+            self.log_message(f"处理出错: {e}", level="ERROR")
+
+    # ══════════════════════════════════════════════════════════
+    #  SORTING
+    # ══════════════════════════════════════════════════════════
+    def sort_files(self, fps):
+        if self.sort_by_time.get():
+            fps.sort(key=lambda x: os.path.getmtime(x))
+        else:
+            names = [os.path.splitext(os.path.basename(p))[0] for p in fps]
+            if all(re.match(r'^\d+$', n) for n in names):
+                fps.sort(key=lambda x: int(
+                    os.path.splitext(os.path.basename(x))[0]))
             else:
-                file_paths.sort(key=lambda x: os.path.basename(x))
-            return file_paths
+                fps.sort(key=lambda x: os.path.basename(x))
+        return fps
 
-    def all_files_numeric(self, file_paths):
-        for path in file_paths:
-            name = os.path.splitext(os.path.basename(path))[0]
-            if not re.match(r'^\d+$', name):
-                return False
-        return True
-
-    def extract_number(self, filename):
-        name = os.path.splitext(filename)[0]
-        return int(name) if name.isdigit() else 0
-
-    def determine_auto_mode(self, images):
-        """自动选择合并模式：只要存在竖屏图片（高>宽）则横向合并，否则网格2列合并"""
-        for img in images:
-            if img.height > img.width:
-                return "horizontal"
-        return "grid2"
-
+    # ══════════════════════════════════════════════════════════
+    #  MERGE — 智能布局 + 网格
+    # ══════════════════════════════════════════════════════════
+    #
+    #  智能布局规则：
+    #    1 张          → 1 列（单张直接输出）
+    #    2-4 张 竖屏    → 全部排一行（竖屏图片横向拼接）
+    #    2-4 张 横屏/方  → 两列网格
+    #    5 张及以上      → 四列网格
+    #
+    #  用户手动选了"横向多少张"或"竖向多少张"时
+    #  覆盖智能布局
+    #
     def merge_images(self, file_paths):
         images = []
-        for path in file_paths:
-            img = Image.open(path)
-            if self.output_format.get() == "png" and img.mode != "RGBA":
-                img = img.convert("RGBA")
+        for p in file_paths:
+            img = Image.open(p)
+            if self.output_format.get() == 'png':
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+            else:
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
             images.append(img)
-        mode = self.merge_mode.get()
-        if mode == "auto":
-            actual_mode = self.determine_auto_mode(images)
-            mode_names = {
-                "horizontal": "横向合并",
-                "grid2": "网格合并 (2×n)"
-            }
-            self.log_message(f"自动选择布局: {mode_names[actual_mode]}")
-        else:
-            actual_mode = mode
-        
-        if actual_mode == "horizontal":
-            return self.merge_horizontal(images, file_paths, mode=actual_mode)
-        elif actual_mode == "vertical":
-            return self.merge_vertical(images, file_paths, mode=actual_mode)
-        elif actual_mode == "grid2":
-            return self.merge_grid(images, file_paths, columns=2, mode=actual_mode)
-        elif actual_mode == "grid3":
-            return self.merge_grid(images, file_paths, columns=3, mode=actual_mode)
-        elif actual_mode == "grid4":
-            return self.merge_grid(images, file_paths, columns=4, mode=actual_mode)
-        else:
-            raise ValueError("未知的合并模式")
 
-    def merge_horizontal(self, images, file_paths, mode="horizontal"):
+        n  = len(images)
+        gc = self.grid_cols.get()
+        gr = self.grid_rows.get()
+
+        if gc > 0:
+            cols = gc
+        elif gr > 0:
+            cols = max(1, math.ceil(n / gr))
+        else:
+            # ── 智能布局 ──
+            if n <= 1:
+                cols = 1
+            elif n <= 4:
+                # 存在竖屏图片 → 全部排一行；否则两列网格
+                has_portrait = any(img.height > img.width for img in images)
+                cols = n if has_portrait else 2
+            else:
+                cols = 4
+
+        rows = math.ceil(n / cols)
+        self.log_message(f"网格布局: {cols}列 × {rows}行")
+        return self._merge_grid(images, file_paths, cols)
+
+    def _merge_grid(self, images, fps, cols):
         if not images:
             raise ValueError("没有图片可合并")
-        # 统一高度
-        target_height = max(img.height for img in images)
-        resized_images = []
-        for img in images:
-            ratio = target_height / img.height
-            new_width = int(img.width * ratio)
-            resized = img.resize((new_width, target_height), Image.Resampling.LANCZOS)
-            resized_images.append(resized)
-        
-        # 计算总宽（无间距）
-        total_width_no_gap = sum(img.width for img in resized_images)
-        # 间距 = 最长边 × 0.2%
-        max_side = max(total_width_no_gap, target_height)
-        gap = max(1, int(max_side * 0.002))
-        
-        # 最终画布宽度 = 图片总宽 + (图片数-1)*间距
-        total_width = total_width_no_gap + gap * (len(resized_images) - 1)
-        
-        # 背景色：JPG深灰，PNG透明
-        if self.output_format.get() == "jpg":
-            bg_color = (40, 40, 40)      # 深灰色
-            merged = Image.new('RGB', (total_width, target_height), bg_color)
-        else:
-            merged = Image.new('RGBA', (total_width, target_height), (0, 0, 0, 0))
-        
-        # 放置图片，间隔为 gap
-        x_offset = 0
-        for img in resized_images:
-            merged.paste(img, (x_offset, 0))
-            x_offset += img.width + gap
-        
-        return self.save_image(merged, file_paths[0], mode=mode)
 
-    def merge_vertical(self, images, file_paths, mode="vertical"):
-        if not images:
-            raise ValueError("没有图片可合并")
-        # 统一宽度
-        target_width = max(img.width for img in images)
-        resized_images = []
-        for img in images:
-            ratio = target_width / img.width
-            new_height = int(img.height * ratio)
-            resized = img.resize((target_width, new_height), Image.Resampling.LANCZOS)
-            resized_images.append(resized)
-
-        total_height_no_gap = sum(img.height for img in resized_images)
-        max_side = max(target_width, total_height_no_gap)
-        gap = max(1, int(max_side * 0.002))
-        total_height = total_height_no_gap + gap * (len(resized_images) - 1)
-
-        if self.output_format.get() == "jpg":
-            bg_color = (40, 40, 40)
-            merged = Image.new('RGB', (target_width, total_height), bg_color)
-        else:
-            merged = Image.new('RGBA', (target_width, total_height), (0, 0, 0, 0))
-
-        y_offset = 0
-        for img in resized_images:
-            merged.paste(img, (0, y_offset))
-            y_offset += img.height + gap
-
-        return self.save_image(merged, file_paths[0], mode=mode)
-
-    def merge_grid(self, images, file_paths, columns, mode="grid"):
-        if not images:
-            raise ValueError("没有图片可合并")
-        rows = math.ceil(len(images) / columns)
-        # 单元格基准尺寸（最大宽高）
-        cell_w = max(img.width for img in images)
+        n    = len(images)
+        rows = math.ceil(n / cols)
+        cell_w = max(img.width  for img in images)
         cell_h = max(img.height for img in images)
-        
-        # 初步画布尺寸（无间距）
-        canvas_w_no_gap = columns * cell_w
-        canvas_h_no_gap = rows * cell_h
-        max_side_no_gap = max(canvas_w_no_gap, canvas_h_no_gap)
-        gap = max(1, int(max_side_no_gap * 0.002))
-        
-        total_width = columns * cell_w + (columns - 1) * gap
-        total_height = rows * cell_h + (rows - 1) * gap
-        
-        # 深灰色背景（JPG）或透明（PNG）
-        if self.output_format.get() == "jpg":
-            bg_color = (40, 40, 40)
-            merged = Image.new('RGB', (total_width, total_height), bg_color)
+
+        gap = max(1, int(max(cols * cell_w, rows * cell_h) * 0.002))
+        tw  = cols * cell_w + (cols - 1) * gap
+        th  = rows * cell_h + (rows - 1) * gap
+
+        is_jpg = self.output_format.get() == 'jpg'
+        if is_jpg:
+            merged    = Image.new('RGB', (tw, th), GAP_RGB)
+            pad_color = GAP_RGB
         else:
-            merged = Image.new('RGBA', (total_width, total_height), (0, 0, 0, 0))
-        
-        # 放置图片，间距由 gap 自然形成
+            merged    = Image.new('RGBA', (tw, th), (0, 0, 0, 0))
+            pad_color = (0, 0, 0, 0)
+
         for idx, img in enumerate(images):
-            row = idx // columns
-            col = idx % columns
-            # 使用 ImageOps.pad 保持比例并填充到统一单元格
-            padded = ImageOps.pad(img, (cell_w, cell_h),
-                                 color='white' if self.output_format.get() == "jpg" else (0,0,0,0),
-                                 method=Image.Resampling.LANCZOS)
-            x = col * (cell_w + gap)
-            y = row * (cell_h + gap)
-            merged.paste(padded, (x, y))
-        
-        # 不再绘制任何分隔线，空缺网格自动显示背景色
-        return self.save_image(merged, file_paths[0], mode=mode)
+            r, c = idx // cols, idx % cols
+            padded = ImageOps.pad(
+                img, (cell_w, cell_h),
+                color=pad_color,
+                method=Image.Resampling.LANCZOS)
+            merged.paste(padded,
+                         (c * (cell_w + gap), r * (cell_h + gap)))
 
-    def save_jpg_with_limit(self, img, filepath, max_size_mb=20):
-        """保存 JPG 并确保文件体积不超过 max_size_mb MB，逐步降低质量直到满足要求"""
-        max_bytes = max_size_mb * 1024 * 1024
-        quality = 95
-        while quality >= 10:
-            img.save(filepath, format='JPEG', quality=quality, optimize=True)
-            if os.path.getsize(filepath) < max_bytes:
-                break
-            quality -= 5
-        # 若极低质量仍超限，则保留最低质量版本
-        if quality < 10:
-            img.save(filepath, format='JPEG', quality=10, optimize=True)
+        return self.save_image(merged, fps[0])
 
-    def save_image(self, image, reference_path, mode=None):
-        output_dir = os.path.dirname(reference_path)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-        actual_mode = mode if mode is not None else self.merge_mode.get()
-        mode_short = {
-            "horizontal": "horiz",
-            "vertical": "vert",
-            "grid2": "grid2",
-            "grid3": "grid3",
-            "grid4": "grid4",
-            "auto": "auto"
-        }.get(actual_mode, "merged")
-        fmt = self.output_format.get()
-        filename = f"merged_{mode_short}_{timestamp}.{fmt}"
-        filepath = os.path.join(output_dir, filename)
-        if fmt == "jpg":
-            if image.mode != "RGB":
-                image = image.convert("RGB")
-            self.save_jpg_with_limit(image, filepath, max_size_mb=20)
+    # ══════════════════════════════════════════════════════════
+    #  COMPRESSION — 三阶段策略
+    # ══════════════════════════════════════════════════════════
+    def save_jpg_with_limit(self, img, fp, limit_mb=20):
+        limit = limit_mb * 1024 * 1024
+        ow, oh = img.size
+
+        def _save(q, sc=1.0):
+            t = (img if sc >= 0.999
+                 else img.resize((max(1, int(ow * sc)),
+                                  max(1, int(oh * sc))),
+                                 Image.Resampling.LANCZOS))
+            t.save(fp, format='JPEG', quality=q, optimize=True)
+            return os.path.getsize(fp)
+
+        # Phase 1a: quality=95
+        sz = _save(95)
+        if sz <= limit:
+            self.log_message(
+                f"JPG: quality=95, 无需压缩 ({sz / 1048576:.1f}MB)")
+            return
+
+        # Phase 1b: 二分 [80, 94]
+        lo, hi, bq, bs = 80, 94, -1, float('inf')
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            sz = _save(mid)
+            if sz <= limit:
+                bq, bs = mid, sz
+                lo = mid + 1
+            else:
+                hi = mid - 1
+
+        if bq >= 80:
+            bs = _save(bq)
+            if bs >= limit * 0.70:
+                self.log_message(
+                    f"JPG: quality={bq}, {ow}x{oh}, "
+                    f"{bs / 1048576:.1f}MB")
+                return
+
+            # Phase 1.5: 更高画质 + 缩分辨率
+            hq = min(bq + 1, 95)
+            self.log_message(
+                f"quality={bq} 仅 {bs / 1048576:.1f}MB，"
+                f"尝试 quality={hq} + 缩小分辨率...")
+
+            sz = _save(hq)
+            if sz <= limit:
+                self.log_message(
+                    f"JPG: quality={hq}, {ow}x{oh}, "
+                    f"{sz / 1048576:.1f}MB")
+                return
+
+            sl, sh, bsc = 50, 98, -1
+            while sl <= sh:
+                sm = (sl + sh) // 2
+                sz = _save(hq, sm / 100.0)
+                if sz <= limit:
+                    bsc = sm
+                    sl = sm + 1
+                else:
+                    sh = sm - 1
+
+            if bsc >= 50:
+                sz = _save(hq, bsc / 100.0)
+                nw = max(1, int(ow * bsc / 100))
+                nh = max(1, int(oh * bsc / 100))
+                self.log_message(
+                    f"JPG: quality={hq}, 缩放{bsc}%"
+                    f"({nw}x{nh}), {sz / 1048576:.1f}MB")
+                return
+
+            _save(bq)
+            self.log_message(
+                f"JPG: quality={bq}, {ow}x{oh}, "
+                f"{bs / 1048576:.1f}MB")
+            return
+
+        # Phase 2: quality=80 仍超限 → 缩分辨率
+        self.log_message("quality=80 仍超限，开始缩小分辨率...")
+        sl, sh, bsc = 50, 98, -1
+        while sl <= sh:
+            sm = (sl + sh) // 2
+            sz = _save(80, sm / 100.0)
+            if sz <= limit:
+                bsc = sm
+                sl = sm + 1
+            else:
+                sh = sm - 1
+
+        if bsc >= 50:
+            sz = _save(80, bsc / 100.0)
+            nw = max(1, int(ow * bsc / 100))
+            nh = max(1, int(oh * bsc / 100))
+            self.log_message(
+                f"JPG: quality=80, 缩放{bsc}%"
+                f"({nw}x{nh}), {sz / 1048576:.1f}MB")
+            return
+
+        sz = _save(80, 0.50)
+        self.log_message(f"警告: 已缩至50%，{sz / 1048576:.1f}MB")
+
+    def save_png_with_limit(self, img, fp, limit_mb=20):
+        limit = limit_mb * 1024 * 1024
+        ow, oh = img.size
+
+        def _save(cl, sc=1.0):
+            t = (img if sc >= 0.999
+                 else img.resize((max(1, int(ow * sc)),
+                                  max(1, int(oh * sc))),
+                                 Image.Resampling.LANCZOS))
+            t.save(fp, format='PNG', compress_level=cl)
+            return os.path.getsize(fp)
+
+        sz = _save(6)
+        if sz <= limit:
+            self.log_message(
+                f"PNG: compress_level=6 ({sz / 1048576:.1f}MB)")
+            return
+
+        sz = _save(9)
+        if sz <= limit:
+            self.log_message(
+                f"PNG: compress_level=9 ({sz / 1048576:.1f}MB)")
+            return
+
+        self.log_message(
+            "PNG compress_level=9 仍超限，开始缩小分辨率...")
+        sl, sh, bsc = 50, 98, -1
+        while sl <= sh:
+            sm = (sl + sh) // 2
+            sz = _save(9, sm / 100.0)
+            if sz <= limit:
+                bsc = sm
+                sl = sm + 1
+            else:
+                sh = sm - 1
+
+        if bsc >= 50:
+            sz = _save(9, bsc / 100.0)
+            nw = max(1, int(ow * bsc / 100))
+            nh = max(1, int(oh * bsc / 100))
+            self.log_message(
+                f"PNG: 缩放{bsc}%({nw}x{nh}), "
+                f"{sz / 1048576:.1f}MB")
+            return
+
+        sz = _save(9, 0.50)
+        self.log_message(f"警告: 已缩至50%，{sz / 1048576:.1f}MB")
+
+    # ── 统一保存入口 ──────────────────────────────────────────
+    def save_image(self, image, ref_path):
+        out_dir = os.path.dirname(ref_path)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+        gc = self.grid_cols.get()
+        gr = self.grid_rows.get()
+        if gc > 0:
+            layout = f'c{gc}'
+        elif gr > 0:
+            layout = f'r{gr}'
         else:
-            if image.mode != "RGBA":
-                image = image.convert("RGBA")
-            image.save(filepath, format="PNG", compress_level=0)
-        return filepath
+            layout = 'auto'
+        fmt = self.output_format.get()
+        fp = os.path.join(out_dir, f"merged_{layout}_{ts}.{fmt}")
 
+        if fmt == 'jpg':
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            self.save_jpg_with_limit(image, fp)
+        else:
+            if image.mode != 'RGBA':
+                image = image.convert('RGBA')
+            self.save_png_with_limit(image, fp)
+        return fp
+
+
+# ═══════════════════════════════════════════════════════════════
+#  MAIN
+# ═══════════════════════════════════════════════════════════════
 if __name__ == '__main__':
     root = TkinterDnD.Tk()
     app = ImageMergerApp(root)
